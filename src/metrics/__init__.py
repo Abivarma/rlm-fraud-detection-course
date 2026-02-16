@@ -1,6 +1,5 @@
 """Metrics tracking and visualization utilities."""
 
-from .tracker import MetricsTracker
-from .visualizer import MetricsVisualizer
+from .tracker import MetricsTracker, AccuracyMetrics
 
-__all__ = ["MetricsTracker", "MetricsVisualizer"]
+__all__ = ["MetricsTracker", "AccuracyMetrics"]
