@@ -1,0 +1,5 @@
+batch_size,tokens,cost_usd,latency_ms,f1_score,precision,recall,accuracy,error
+10,949.0,0.00313,3020.514726638794,0.0,0.0,0.0,0.9,
+50,3128.0,0.00932,5613.553047180176,0.0,0.0,0.0,0.92,
+100,5739.0,0.015915,28106.075286865234,0.4,0.3333333333333333,0.5,0.97,
+200,,,,,,,,"OpenAI API error: Error code: 429 - {'error': {'message': 'Rate limit reached for gpt-4o in organization org-wuz2RXKXrPbl7fMKe5T2LnfP on requests per min (RPM): Limit 3, Used 3, Requested 1. Please try again in 20s. Visit https://platform.openai.com/account/rate-limits to learn more. You can increase your rate limit by adding a payment method to your account at https://platform.openai.com/account/billing.', 'type': 'requests', 'param': None, 'code': 'rate_limit_exceeded'}}"
