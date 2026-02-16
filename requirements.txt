@@ -1,5 +1,5 @@
 # Core dependencies
-python>=3.11
+# Python 3.11+ required (managed by uv/venv)
 
 # LLM frameworks
 pydantic-ai>=0.0.14

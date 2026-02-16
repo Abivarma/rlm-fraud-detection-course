@@ -1,0 +1,39 @@
+{
+  "velocity": {
+    "name": "Velocity Attack",
+    "description": "Multiple transactions in rapid succession from same user",
+    "indicators": {
+      "time_window": "< 5 minutes",
+      "transaction_count": "> 8 transactions",
+      "typical_behavior": "Normal users: 1-2 transactions per hour"
+    }
+  },
+  "amount_anomaly": {
+    "name": "Amount Anomaly",
+    "description": "Transaction amount significantly higher than normal",
+    "indicators": {
+      "statistical_threshold": "> 3 standard deviations from mean",
+      "example": "User average: $50, transaction: $5,000",
+      "context": "No prior large purchases in history"
+    }
+  },
+  "geographic": {
+    "name": "Geographic Outlier",
+    "description": "Transactions from impossible locations",
+    "indicators": {
+      "pattern": "Location velocity > physically possible",
+      "example": "NYC purchase, then Tokyo 2 hours later",
+      "physical_limit": "Speed of air travel"
+    }
+  },
+  "account_takeover": {
+    "name": "Account Takeover",
+    "description": "Sudden behavioral pattern shift indicating compromised account",
+    "indicators": {
+      "device_change": "Different device than usual",
+      "category_shift": "Unusual purchase categories",
+      "amount_change": "1.5-3x normal spending",
+      "example": "Grocery shopper suddenly buying gift cards"
+    }
+  }
+}
