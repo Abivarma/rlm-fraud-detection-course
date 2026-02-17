@@ -20,6 +20,8 @@ class AnalysisMetrics:
     transactions_analyzed: int
     context_size_chars: Optional[int] = None
     retrieval_latency_ms: Optional[float] = None
+    filter_latency_ms: Optional[float] = None  # RLM: time to filter transactions
+    transactions_filtered: Optional[int] = None  # RLM: number of transactions after filtering
     code_execution_count: Optional[int] = None
     llm_query_calls: Optional[int] = None
     timestamp: str = None
