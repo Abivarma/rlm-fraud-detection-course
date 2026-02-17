@@ -1,0 +1,54 @@
+{
+  "approach": "rag",
+  "total_analyses": 2,
+  "summary": {
+    "tokens": {
+      "mean_total": 4420,
+      "mean_prompt": 4225,
+      "mean_completion": 195,
+      "std_total": 1896.4603871423205
+    },
+    "latency_ms": {
+      "mean": 4487.518906593323,
+      "median": 4487.518906593323,
+      "std": 1930.8285579953786,
+      "min": 3122.2169399261475,
+      "max": 5852.820873260498
+    },
+    "cost_usd": {
+      "mean": 0.012512500000000001,
+      "total": 0.025025000000000002,
+      "std": 0.005218448045156722
+    }
+  },
+  "history": [
+    {
+      "approach": "rag",
+      "total_tokens": 3079,
+      "prompt_tokens": 2929,
+      "completion_tokens": 150,
+      "latency_ms": 3122.2169399261475,
+      "cost_usd": 0.0088225,
+      "transactions_analyzed": 50,
+      "context_size_chars": 9032,
+      "retrieval_latency_ms": 222.71108627319336,
+      "code_execution_count": null,
+      "llm_query_calls": null,
+      "timestamp": "2026-02-17T02:48:40.741347+00:00"
+    },
+    {
+      "approach": "rag",
+      "total_tokens": 5761,
+      "prompt_tokens": 5521,
+      "completion_tokens": 240,
+      "latency_ms": 5852.820873260498,
+      "cost_usd": 0.0162025,
+      "transactions_analyzed": 100,
+      "context_size_chars": 16585,
+      "retrieval_latency_ms": 362.3220920562744,
+      "code_execution_count": null,
+      "llm_query_calls": null,
+      "timestamp": "2026-02-17T02:49:11.604880+00:00"
+    }
+  ]
+}

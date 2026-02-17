@@ -1,0 +1,12 @@
+{
+  "approach": "rag",
+  "annual_cost": 591.39125,
+  "f1_score": 0.28571428571428575,
+  "precision": 0.3333333333333333,
+  "recall": 0.25,
+  "cost_per_100": 0.0162025,
+  "latency_ms": 5852.820873260498,
+  "retrieval_latency_ms": 362.3220920562744,
+  "batch_size": 100,
+  "cost_reduction_vs_naive": 0.5371393492940288
+}
