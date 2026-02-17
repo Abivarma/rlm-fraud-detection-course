@@ -27,6 +27,8 @@ This is a **hands-on course** that demonstrates how to reduce LLM-based fraud de
 - Data Scientists building fraud detection systems
 - Anyone interested in practical LLM cost optimization
 
+**🔍 Have critical questions?** Read the [**Critical FAQ**](docs/CRITICAL_FAQ.md) addressing 16 enterprise questions about costs, scalability, production readiness, and ROI.
+
 ---
 
 ## 🎯 The Results (Spoiler Alert!)
@@ -50,9 +52,11 @@ All three approaches were tested on the **same dataset** (10,000 transactions, 2
 ![Scaling Economics](results/visualizations/scaling_economics.png)
 
 **At enterprise scale (10M transactions/day):**
-- Naive approach: **$157,915/year**
+- Naive approach: **$157,915/year** (LLM API only)
 - RAG approach: **$46,423/year** (saves $111,492)
 - RLM approach: **$11,333/year** (saves $146,582 vs naive!)
+
+> **⚠️ Important:** These are LLM API costs only. Real enterprise deployment adds ~$2,400/year infrastructure (monitoring, vector DB, etc.). See [Critical FAQ](docs/CRITICAL_FAQ.md) for complete cost breakdown and enterprise considerations.
 
 ### Performance Comparison
 
@@ -669,25 +673,33 @@ MIT License - See LICENSE file for details
 
 ## ❓ FAQ
 
+### Quick Answers
+
+**Q: Is "$11/year" realistic for enterprise?**
+A: Yes for LLM API costs. Real enterprise total: **~$13.7K/year** (includes infrastructure). Still 91% cheaper than naive. See [Critical FAQ Q1](docs/CRITICAL_FAQ.md#q1-from-158year-to-11year---is-this-realistic-for-enterprise-scale) for complete breakdown.
+
 **Q: Can I use this in production?**
-A: This is an educational framework. For production, you'd need:
-- Real fraud data (not synthetic)
-- Larger validation sets
-- Hybrid approaches (multi-tier filtering)
-- Monitoring and alerting
-- Compliance and explainability
+A: This is an educational framework. For production, you'd need monitoring, security, compliance (GDPR/PCI-DSS), and hybrid approaches. See [Critical FAQ Q4](docs/CRITICAL_FAQ.md#q4-is-this-course-code-production-ready) for production requirements.
 
 **Q: Why is RLM's F1 score 0.0?**
-A: This implementation uses aggressive statistical filtering that trades recall for cost. In production, you'd tune thresholds or use a hybrid approach combining RLM for filtering + RAG for analysis.
+A: Aggressive filtering trades recall for cost (educational demo). Production F1 >0.70 achievable with tuned filters + fine-tuning. See [Critical FAQ Q6](docs/CRITICAL_FAQ.md#q6-f1-scores-of-00-0571-are-terrible-how-is-this-usable).
+
+**Q: What about latency? 3-7s is too slow.**
+A: Use async processing or hybrid architecture (rules + LLM). See [Critical FAQ Q5](docs/CRITICAL_FAQ.md#q5-what-about-latency-3-7-seconds-is-too-slow-for-real-time-fraud-detection) for real-time solutions.
 
 **Q: What if I have higher fraud rates?**
-A: Higher fraud rates (>10%) benefit less from RLM filtering since fewer transactions can be safely skipped. Use Naive or RAG for comprehensive analysis.
+A: Higher fraud rates (>10%) benefit less from RLM filtering. Use RAG instead. See [Critical FAQ Q7](docs/CRITICAL_FAQ.md#q7-only-2-fraud-rate-in-dataset---what-about-real-world-scenarios).
 
-**Q: Can I use different LLMs?**
-A: Yes! The agents are model-agnostic. Try Claude, Llama, or other models. Just update the pricing calculations and API calls.
+### For Enterprise Decision-Makers
 
-**Q: What about fine-tuning?**
-A: Fine-tuning could improve accuracy and reduce token usage further. That's a great extension project! The cost optimization techniques here still apply.
+**Read the complete [Critical FAQ](docs/CRITICAL_FAQ.md)** for answers to:
+- Cost & Scalability (Q1-Q3): Real costs, rate limits, comparison with traditional systems
+- Production Readiness (Q4-Q5): What's missing, latency limitations
+- Accuracy & Reliability (Q6-Q7): F1 scores, fraud rate impacts
+- Technical Limitations (Q8-Q10): Embedding costs, synthetic data, vendor lock-in
+- Comparisons (Q11-Q12): Fine-tuned models, traditional ML
+- Security & Compliance (Q13-Q14): GDPR/PCI-DSS, hallucinations
+- Real-World Deployment (Q15-Q16): Case studies, ROI timeline
 
 ---
 
