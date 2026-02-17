@@ -47,11 +47,12 @@ class NaiveFraudAgent:
         # Store last analysis reasoning
         self.last_reasoning = {}
 
-    def analyze(self, transactions: pd.DataFrame) -> Tuple[List[bool], AnalysisMetrics]:
+    def analyze(self, transactions: pd.DataFrame, retry_delay: int = 20) -> Tuple[List[bool], AnalysisMetrics]:
         """Analyze transactions for fraud using naive LLM approach.
 
         Args:
             transactions: DataFrame with transaction data
+            retry_delay: Seconds to wait on rate limit (default: 20)
 
         Returns:
             Tuple of (predictions, metrics):
@@ -67,25 +68,33 @@ class NaiveFraudAgent:
         # Build prompt
         prompt = self._build_prompt(transactions)
 
-        # Call LLM
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert fraud detection analyst. Analyze transactions and identify fraudulent ones with clear reasoning."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                temperature=self.temperature,
-                response_format={"type": "json_object"}
-            )
-        except Exception as e:
-            raise Exception(f"OpenAI API error: {str(e)}")
+        # Call LLM with retry logic
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are an expert fraud detection analyst. Analyze transactions and identify fraudulent ones with clear reasoning."
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    temperature=self.temperature,
+                    response_format={"type": "json_object"}
+                )
+                break  # Success, exit retry loop
+            except Exception as e:
+                error_str = str(e)
+                if "rate_limit" in error_str.lower() and attempt < max_retries - 1:
+                    print(f"⚠️ Rate limit hit. Waiting {retry_delay}s before retry {attempt + 1}/{max_retries}...")
+                    time.sleep(retry_delay)
+                else:
+                    raise Exception(f"OpenAI API error: {error_str}")
 
         # Calculate latency
         latency_ms = (time.time() - start_time) * 1000
