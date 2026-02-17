@@ -1,0 +1,120 @@
+{
+  "summary": {
+    "comparison_date": "2026-02-17",
+    "dataset": "Same dataset across all phases (random_state=42)",
+    "batch_size": 100,
+    "model": "gpt-4o-mini"
+  },
+  "metrics": [
+    {
+      "Approach": "Naive",
+      "Tokens": 28120.0,
+      "Cost_per_100": 0.0043264499999999,
+      "Latency_s": 4.377584218978882,
+      "F1_Score": 0.2857142857142857,
+      "Precision": 0.3333333333333333,
+      "Recall": 0.25,
+      "Annual_Cost": 157.91542499999997,
+      "Cost_Reduction_%": 0.0,
+      "Token_Reduction_%": 0.0
+    },
+    {
+      "Approach": "RAG",
+      "Tokens": 7747.0,
+      "Cost_per_100": 0.00127185,
+      "Latency_s": 7.408606052398682,
+      "F1_Score": 0.5714285714285715,
+      "Precision": 0.6666666666666666,
+      "Recall": 0.5,
+      "Annual_Cost": 46.42252500000001,
+      "Cost_Reduction_%": 70.60291925250426,
+      "Token_Reduction_%": 72.450213371266
+    },
+    {
+      "Approach": "RLM",
+      "Tokens": 1620.0,
+      "Cost_per_100": 0.0003105,
+      "Latency_s": 3.153623104095459,
+      "F1_Score": 0.0,
+      "Precision": 0.0,
+      "Recall": 0.0,
+      "Annual_Cost": 11.33325,
+      "Cost_Reduction_%": 92.82321533821015,
+      "Token_Reduction_%": 94.23897581792319
+    }
+  ],
+  "scaling": [
+    {
+      "Volume": "1K",
+      "Transactions_per_Day": 1000,
+      "Naive_Annual": 15.791542499999997,
+      "RAG_Annual": 4.642252500000001,
+      "RLM_Annual": 1.1333250000000001
+    },
+    {
+      "Volume": "10K",
+      "Transactions_per_Day": 10000,
+      "Naive_Annual": 157.91542499999997,
+      "RAG_Annual": 46.42252500000001,
+      "RLM_Annual": 11.33325
+    },
+    {
+      "Volume": "100K",
+      "Transactions_per_Day": 100000,
+      "Naive_Annual": 1579.1542499999998,
+      "RAG_Annual": 464.2252500000001,
+      "RLM_Annual": 113.3325
+    },
+    {
+      "Volume": "1M",
+      "Transactions_per_Day": 1000000,
+      "Naive_Annual": 15791.542499999996,
+      "RAG_Annual": 4642.2525000000005,
+      "RLM_Annual": 1133.325
+    },
+    {
+      "Volume": "10M",
+      "Transactions_per_Day": 10000000,
+      "Naive_Annual": 157915.42499999996,
+      "RAG_Annual": 46422.52500000001,
+      "RLM_Annual": 11333.25
+    }
+  ],
+  "savings": [
+    {
+      "Volume": "1K",
+      "RAG_Savings": 11.149289999999997,
+      "RLM_Savings": 14.658217499999996
+    },
+    {
+      "Volume": "10K",
+      "RAG_Savings": 111.49289999999996,
+      "RLM_Savings": 146.58217499999998
+    },
+    {
+      "Volume": "100K",
+      "RAG_Savings": 1114.9289999999996,
+      "RLM_Savings": 1465.8217499999998
+    },
+    {
+      "Volume": "1M",
+      "RAG_Savings": 11149.289999999995,
+      "RLM_Savings": 14658.217499999995
+    },
+    {
+      "Volume": "10M",
+      "RAG_Savings": 111492.89999999995,
+      "RLM_Savings": 146582.17499999996
+    }
+  ],
+  "key_insights": {
+    "cost_reduction_rag": "70.6%",
+    "cost_reduction_rlm": "92.8%",
+    "token_reduction_rag": "72.5%",
+    "token_reduction_rlm": "94.2%",
+    "enterprise_savings_rlm": "$146,582/year at 10M txns/day",
+    "best_f1": "RAG: 0.571",
+    "best_latency": "RLM: 3.2s",
+    "best_cost": "RLM: $0.000311 per 100"
+  }
+}
