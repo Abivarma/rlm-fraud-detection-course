@@ -3,52 +3,52 @@
   "total_analyses": 2,
   "summary": {
     "tokens": {
-      "mean_total": 4420,
-      "mean_prompt": 4225,
-      "mean_completion": 195,
-      "std_total": 1896.4603871423205
+      "mean_total": 6704,
+      "mean_prompt": 6496.5,
+      "mean_completion": 207.5,
+      "std_total": 1475.0247455551382
     },
     "latency_ms": {
-      "mean": 4487.518906593323,
-      "median": 4487.518906593323,
-      "std": 1930.8285579953786,
-      "min": 3122.2169399261475,
-      "max": 5852.820873260498
+      "mean": 7845.757603645325,
+      "median": 7845.757603645325,
+      "std": 618.2256525854397,
+      "min": 7408.606052398682,
+      "max": 8282.909154891968
     },
     "cost_usd": {
-      "mean": 0.012512500000000001,
-      "total": 0.025025000000000002,
-      "std": 0.005218448045156722
+      "mean": 0.001098975,
+      "total": 0.00219795,
+      "std": 0.0002444821695952489
     }
   },
   "history": [
     {
       "approach": "rag",
-      "total_tokens": 3079,
-      "prompt_tokens": 2929,
-      "completion_tokens": 150,
-      "latency_ms": 3122.2169399261475,
-      "cost_usd": 0.0088225,
+      "total_tokens": 5661,
+      "prompt_tokens": 5490,
+      "completion_tokens": 171,
+      "latency_ms": 8282.909154891968,
+      "cost_usd": 0.0009261,
       "transactions_analyzed": 50,
-      "context_size_chars": 9032,
-      "retrieval_latency_ms": 222.71108627319336,
+      "context_size_chars": 16609,
+      "retrieval_latency_ms": 218.7361717224121,
       "code_execution_count": null,
       "llm_query_calls": null,
-      "timestamp": "2026-02-17T02:48:40.741347+00:00"
+      "timestamp": "2026-02-17T03:57:30.272902+00:00"
     },
     {
       "approach": "rag",
-      "total_tokens": 5761,
-      "prompt_tokens": 5521,
-      "completion_tokens": 240,
-      "latency_ms": 5852.820873260498,
-      "cost_usd": 0.0162025,
+      "total_tokens": 7747,
+      "prompt_tokens": 7503,
+      "completion_tokens": 244,
+      "latency_ms": 7408.606052398682,
+      "cost_usd": 0.0012718500000000002,
       "transactions_analyzed": 100,
-      "context_size_chars": 16585,
-      "retrieval_latency_ms": 362.3220920562744,
+      "context_size_chars": 23250,
+      "retrieval_latency_ms": 285.45618057250977,
       "code_execution_count": null,
       "llm_query_calls": null,
-      "timestamp": "2026-02-17T02:49:11.604880+00:00"
+      "timestamp": "2026-02-17T03:58:02.688152+00:00"
     }
   ]
 }

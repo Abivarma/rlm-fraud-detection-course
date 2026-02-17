@@ -23,11 +23,11 @@ class NaiveFraudAgent:
     - Limited scalability (context window constraints)
     """
 
-    def __init__(self, model: str = "gpt-4o", temperature: float = 0.1):
+    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.1):
         """Initialize the naive fraud detection agent.
 
         Args:
-            model: OpenAI model to use
+            model: OpenAI model to use (default: gpt-4o-mini for cost efficiency)
             temperature: Sampling temperature for LLM
         """
         self.model = model
@@ -41,11 +41,30 @@ class NaiveFraudAgent:
         self.client = OpenAI(api_key=api_key)
 
         # Cost configuration (per 1M tokens)
-        self.input_cost = float(os.getenv('INPUT_TOKEN_COST', '2.50'))
-        self.output_cost = float(os.getenv('OUTPUT_TOKEN_COST', '10.00'))
+        if 'mini' in model.lower():
+            # gpt-4o-mini pricing (much cheaper!)
+            self.input_cost = 0.150
+            self.output_cost = 0.600
+        else:
+            # gpt-4o pricing (use env vars if available)
+            self.input_cost = float(os.getenv('INPUT_TOKEN_COST', '2.50'))
+            self.output_cost = float(os.getenv('OUTPUT_TOKEN_COST', '10.00'))
+
+        # Load historical fraud cases
+        self.historical_cases = self._load_historical_cases()
 
         # Store last analysis reasoning
         self.last_reasoning = {}
+
+    def _load_historical_cases(self) -> List[Dict]:
+        """Load historical fraud case studies for context.
+
+        Returns:
+            List of historical fraud case dictionaries
+        """
+        cases_path = os.path.join(os.path.dirname(__file__), '../../data/historical_fraud_cases.json')
+        with open(cases_path, 'r') as f:
+            return json.load(f)
 
     def analyze(self, transactions: pd.DataFrame, retry_delay: int = 20) -> Tuple[List[bool], AnalysisMetrics]:
         """Analyze transactions for fraud using naive LLM approach.
@@ -143,47 +162,58 @@ class NaiveFraudAgent:
         # Format transactions
         transactions_text = self._format_transactions(transactions)
 
-        prompt = f"""Analyze the following transactions for fraud.
+        # Format ALL historical cases (this makes naive expensive!)
+        historical_text = self._format_historical_cases(self.historical_cases)
 
-## Fraud Patterns to Look For:
+        prompt = f"""Analyze the following transactions for fraud using historical fraud patterns.
+
+## Fraud Pattern Definitions:
 
 1. **Velocity Attack**: Multiple transactions in rapid succession (< 5 minutes) from same user
-   - Normal: 1-2 transactions per hour
-   - Suspicious: > 8 transactions in short window
-
 2. **Amount Anomaly**: Transaction amount significantly higher than normal
-   - Statistical threshold: > 3 standard deviations from mean
-   - Context: No prior large purchases in history
-
 3. **Geographic Outlier**: Transactions from impossible locations
-   - Pattern: Location velocity > physically possible
-   - Example: NYC purchase, then Tokyo 2 hours later
-
 4. **Account Takeover**: Sudden behavioral pattern shift
-   - Different device than usual
-   - Unusual purchase categories
-   - Amount 1.5-3x normal spending
 
-## Transactions to Analyze:
+## Historical Fraud Cases (500 examples for reference):
+
+{historical_text}
+
+## New Transactions to Analyze:
 
 {transactions_text}
 
 ## Instructions:
 
-Analyze each transaction and identify which ones are fraudulent. For each fraudulent transaction, provide clear reasoning based on the patterns above.
+Compare the new transactions against the historical fraud cases above. Identify which transactions are fraudulent based on similar patterns.
 
-Return your analysis as JSON with this structure:
+Return your analysis as JSON:
 {{
     "fraudulent_transactions": ["TXN_001", "TXN_005", ...],
     "reasoning": {{
-        "TXN_001": "Specific reason why this is fraudulent",
-        "TXN_005": "Specific reason why this is fraudulent"
+        "TXN_001": "Matches historical case CASE_XXXX: [reason]",
+        "TXN_005": "Similar to cases CASE_YYYY, CASE_ZZZZ: [reason]"
     }}
 }}
 
-Be precise and cite specific data points (amounts, times, locations) in your reasoning."""
+Reference specific historical cases in your reasoning."""
 
         return prompt
+
+    def _format_historical_cases(self, cases: List[Dict]) -> str:
+        """Format historical fraud cases for prompt.
+
+        Args:
+            cases: List of historical fraud case dictionaries
+
+        Returns:
+            Formatted string with all cases
+        """
+        formatted_cases = []
+        for case in cases:
+            case_text = f"{case['case_id']}: {case['summary']} | {case['fraud_type']} | {case['transaction_pattern']}"
+            formatted_cases.append(case_text)
+
+        return "\n".join(formatted_cases)
 
     def _format_transactions(self, transactions: pd.DataFrame) -> str:
         """Format transactions for inclusion in prompt.

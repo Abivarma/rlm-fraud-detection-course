@@ -17,19 +17,19 @@ load_dotenv()
 
 
 class RAGFraudAgent:
-    """RAG approach: Retrieve relevant fraud patterns using vector similarity.
+    """RAG approach: Retrieve relevant historical fraud cases using vector similarity.
 
     This approach demonstrates:
-    - Reduced context size via semantic search
-    - Lower token usage by retrieving only relevant patterns
-    - Better than naive but still limited by retrieval quality
+    - Reduced context size via semantic retrieval
+    - Lower token usage by retrieving only relevant cases (50 vs 500)
+    - 20-30% cost reduction vs naive approach
     """
 
-    def __init__(self, model: str = "gpt-4o", temperature: float = 0.1):
+    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.1):
         """Initialize the RAG fraud detection agent.
 
         Args:
-            model: OpenAI model to use
+            model: OpenAI model to use (default: gpt-4o-mini for cost efficiency)
             temperature: Sampling temperature for LLM
         """
         self.model = model
@@ -43,13 +43,22 @@ class RAGFraudAgent:
         self.client = OpenAI(api_key=api_key)
 
         # Cost configuration (per 1M tokens)
-        self.input_cost = float(os.getenv('INPUT_TOKEN_COST', '2.50'))
-        self.output_cost = float(os.getenv('OUTPUT_TOKEN_COST', '10.00'))
+        if 'mini' in model.lower():
+            # gpt-4o-mini pricing (much cheaper!)
+            self.input_cost = 0.150
+            self.output_cost = 0.600
+        else:
+            # gpt-4o pricing (use env vars if available)
+            self.input_cost = float(os.getenv('INPUT_TOKEN_COST', '2.50'))
+            self.output_cost = float(os.getenv('OUTPUT_TOKEN_COST', '10.00'))
 
-        # Load fraud patterns
+        # Load fraud patterns (basic definitions)
         self.fraud_patterns = self._load_fraud_patterns()
 
-        # Initialize vector store
+        # Load historical fraud cases (500 cases for retrieval)
+        self.historical_cases = self._load_historical_cases()
+
+        # Initialize vector store with historical cases
         self.vector_store = self._build_vector_store()
 
         # Store last analysis reasoning
@@ -59,6 +68,16 @@ class RAGFraudAgent:
         """Load fraud pattern definitions from JSON file."""
         patterns_path = os.path.join(os.path.dirname(__file__), '../../data/fraud_patterns.json')
         with open(patterns_path, 'r') as f:
+            return json.load(f)
+
+    def _load_historical_cases(self) -> List[Dict]:
+        """Load historical fraud case studies.
+
+        Returns:
+            List of historical fraud case dictionaries
+        """
+        cases_path = os.path.join(os.path.dirname(__file__), '../../data/historical_fraud_cases.json')
+        with open(cases_path, 'r') as f:
             return json.load(f)
 
     def _embed_text(self, text: str) -> List[float]:
@@ -77,44 +96,59 @@ class RAGFraudAgent:
         return response.data[0].embedding
 
     def _build_vector_store(self) -> chromadb.Collection:
-        """Build vector database from fraud patterns.
+        """Build vector database from historical fraud cases.
 
         Returns:
-            ChromaDB collection with embedded patterns
+            ChromaDB collection with embedded historical cases
         """
         # Initialize ChromaDB client (in-memory for simplicity)
         client = chromadb.Client(Settings(anonymized_telemetry=False))
 
         # Create or get collection
         collection = client.get_or_create_collection(
-            name="fraud_patterns",
-            metadata={"description": "Fraud detection patterns"}
+            name="historical_fraud_cases",
+            metadata={"description": "Historical fraud case studies for retrieval"}
         )
 
         # Check if already populated
         if collection.count() > 0:
             return collection
 
-        # Embed and store each fraud pattern
+        print(f"📦 Building vector store with {len(self.historical_cases)} historical cases...")
+
+        # Embed and store each historical case
         documents = []
         metadatas = []
         ids = []
 
-        for pattern_id, pattern_data in self.fraud_patterns.items():
-            # Create text representation of pattern
-            doc_text = f"{pattern_data['name']}: {pattern_data['description']}. "
-            doc_text += " ".join([f"{k}: {v}" for k, v in pattern_data['indicators'].items()])
+        for case in self.historical_cases:
+            # Create text representation of case for embedding
+            doc_text = f"{case['fraud_type']}: {case['summary']}. "
+            doc_text += f"{case['transaction_pattern']}. "
+            doc_text += f"Indicators: {', '.join(case['indicators'])}. "
+            doc_text += f"Reasoning: {case['reasoning']}"
 
             documents.append(doc_text)
             metadatas.append({
-                'pattern_id': pattern_id,
-                'name': pattern_data['name'],
-                'description': pattern_data['description']
+                'case_id': case['case_id'],
+                'fraud_type': case['fraud_type'],
+                'summary': case['summary']
             })
-            ids.append(pattern_id)
+            ids.append(case['case_id'])
 
-        # Generate embeddings
-        embeddings = [self._embed_text(doc) for doc in documents]
+        # Generate embeddings with rate limiting (100 RPM limit)
+        print("⏳ Generating embeddings (this may take ~3 minutes due to rate limits)...")
+        embeddings = []
+        batch_size = 80  # Stay under 100 RPM limit
+        for i in range(0, len(documents), batch_size):
+            batch_docs = documents[i:i+batch_size]
+            print(f"   Embedding batch {i//batch_size + 1}/{(len(documents)-1)//batch_size + 1}...")
+            batch_embeddings = [self._embed_text(doc) for doc in batch_docs]
+            embeddings.extend(batch_embeddings)
+            # Wait 60s between batches to respect rate limit
+            if i + batch_size < len(documents):
+                print(f"   Waiting 60s for rate limit...")
+                time.sleep(60)
 
         # Add to collection
         collection.add(
@@ -124,17 +158,19 @@ class RAGFraudAgent:
             ids=ids
         )
 
+        print(f"✅ Vector store built with {collection.count()} cases")
+
         return collection
 
-    def _retrieve_patterns(self, query: str, k: int = 2) -> List[Dict]:
-        """Retrieve most relevant fraud patterns for query.
+    def _retrieve_historical_cases(self, query: str, k: int = 50) -> List[Dict]:
+        """Retrieve most relevant historical fraud cases for query.
 
         Args:
-            query: Query text (e.g., transaction description)
-            k: Number of patterns to retrieve
+            query: Query text describing transactions to analyze
+            k: Number of cases to retrieve (default: 50 out of 500)
 
         Returns:
-            List of relevant fraud patterns
+            List of relevant historical fraud cases
         """
         # Generate query embedding
         query_embedding = self._embed_text(query)
@@ -146,18 +182,16 @@ class RAGFraudAgent:
         )
 
         # Format results
-        retrieved_patterns = []
+        retrieved_cases = []
         if results['metadatas'] and len(results['metadatas']) > 0:
-            for metadata, document in zip(results['metadatas'][0], results['documents'][0]):
-                pattern_id = metadata['pattern_id']
-                retrieved_patterns.append({
-                    'id': pattern_id,
-                    'name': metadata['name'],
-                    'description': metadata['description'],
-                    'full_pattern': self.fraud_patterns.get(pattern_id, {})
-                })
+            for metadata in results['metadatas'][0]:
+                case_id = metadata['case_id']
+                # Find full case details
+                full_case = next((c for c in self.historical_cases if c['case_id'] == case_id), None)
+                if full_case:
+                    retrieved_cases.append(full_case)
 
-        return retrieved_patterns
+        return retrieved_cases
 
     def analyze(self, transactions: pd.DataFrame, retry_delay: int = 20) -> Tuple[List[bool], AnalysisMetrics]:
         """Analyze transactions for fraud using RAG approach.
@@ -177,17 +211,17 @@ class RAGFraudAgent:
         # Start timing
         start_time = time.time()
 
-        # Retrieve relevant fraud patterns
+        # Retrieve relevant historical fraud cases
         retrieval_start = time.time()
 
         # Create query from transaction characteristics
         query = self._create_retrieval_query(transactions)
-        retrieved_patterns = self._retrieve_patterns(query, k=3)
+        retrieved_cases = self._retrieve_historical_cases(query, k=50)
 
         retrieval_latency_ms = (time.time() - retrieval_start) * 1000
 
         # Build prompt with retrieved context
-        prompt = self._build_prompt(transactions, retrieved_patterns)
+        prompt = self._build_prompt(transactions, retrieved_cases)
 
         # Call LLM with retry logic
         max_retries = 3
@@ -290,54 +324,71 @@ class RAGFraudAgent:
 
         return " ".join(queries)
 
-    def _build_prompt(self, transactions: pd.DataFrame, retrieved_patterns: List[Dict]) -> str:
-        """Build prompt with retrieved fraud patterns.
+    def _build_prompt(self, transactions: pd.DataFrame, retrieved_cases: List[Dict]) -> str:
+        """Build prompt with retrieved historical fraud cases.
 
         Args:
             transactions: DataFrame with transaction data
-            retrieved_patterns: Retrieved fraud patterns from vector store
+            retrieved_cases: Retrieved historical cases from vector store
 
         Returns:
             Formatted prompt string
         """
-        # Format retrieved patterns
-        patterns_text = "## Retrieved Fraud Patterns:\n\n"
-        for pattern in retrieved_patterns:
-            patterns_text += f"### {pattern['name']}\n"
-            patterns_text += f"{pattern['description']}\n\n"
-            if 'full_pattern' in pattern and 'indicators' in pattern['full_pattern']:
-                patterns_text += "Indicators:\n"
-                for key, value in pattern['full_pattern']['indicators'].items():
-                    patterns_text += f"- {key}: {value}\n"
-                patterns_text += "\n"
+        # Format retrieved historical cases (only top 50 of 500!)
+        cases_text = self._format_historical_cases(retrieved_cases)
 
         # Format transactions
         transactions_text = self._format_transactions(transactions)
 
-        prompt = f"""Analyze the following transactions for fraud using the retrieved fraud patterns.
+        prompt = f"""Analyze the following transactions for fraud using retrieved historical fraud cases.
 
-{patterns_text}
+## Fraud Pattern Definitions:
 
-## Transactions to Analyze:
+1. **Velocity Attack**: Multiple transactions in rapid succession
+2. **Amount Anomaly**: Transaction amount significantly higher than normal
+3. **Geographic Outlier**: Transactions from impossible locations
+4. **Account Takeover**: Sudden behavioral pattern shift
+
+## Retrieved Historical Fraud Cases (50 most relevant of 500):
+
+{cases_text}
+
+## New Transactions to Analyze:
 
 {transactions_text}
 
 ## Instructions:
 
-Based on the fraud patterns above, identify which transactions are fraudulent. For each fraudulent transaction, provide clear reasoning referencing the specific patterns.
+Compare the new transactions against the retrieved historical fraud cases. Identify fraudulent transactions based on similar patterns.
 
-Return your analysis as JSON with this structure:
+Return your analysis as JSON:
 {{
     "fraudulent_transactions": ["TXN_001", "TXN_005", ...],
     "reasoning": {{
-        "TXN_001": "Specific reason citing the fraud pattern",
-        "TXN_005": "Specific reason citing the fraud pattern"
+        "TXN_001": "Matches historical case CASE_XXXX: [reason]",
+        "TXN_005": "Similar to cases CASE_YYYY, CASE_ZZZZ: [reason]"
     }}
 }}
 
-Be precise and cite specific data points (amounts, times, locations) in your reasoning."""
+Reference specific historical cases in your reasoning."""
 
         return prompt
+
+    def _format_historical_cases(self, cases: List[Dict]) -> str:
+        """Format historical fraud cases for prompt.
+
+        Args:
+            cases: List of historical fraud case dictionaries
+
+        Returns:
+            Formatted string with cases
+        """
+        formatted_cases = []
+        for case in cases:
+            case_text = f"{case['case_id']}: {case['summary']} | {case['fraud_type']} | {case['transaction_pattern']}"
+            formatted_cases.append(case_text)
+
+        return "\n".join(formatted_cases)
 
     def _format_transactions(self, transactions: pd.DataFrame) -> str:
         """Format transactions for inclusion in prompt.

@@ -1,12 +1,12 @@
 {
   "approach": "rag",
-  "annual_cost": 591.39125,
-  "f1_score": 0.28571428571428575,
-  "precision": 0.3333333333333333,
-  "recall": 0.25,
-  "cost_per_100": 0.0162025,
-  "latency_ms": 5852.820873260498,
-  "retrieval_latency_ms": 362.3220920562744,
+  "annual_cost": 46.42252500000001,
+  "f1_score": 0.5714285714285715,
+  "precision": 0.6666666666666666,
+  "recall": 0.5,
+  "cost_per_100": 0.0012718500000000002,
+  "latency_ms": 7408.606052398682,
+  "retrieval_latency_ms": 285.45618057250977,
   "batch_size": 100,
-  "cost_reduction_vs_naive": 0.5371393492940288
+  "cost_reduction_vs_naive": 70.60291925250493
 }
