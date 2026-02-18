@@ -1,0 +1,752 @@
+{
+  "1": {
+    "rlm": {
+      "tokens": 387,
+      "cost": 0.00010709999999999999,
+      "time": 2.565580129623413,
+      "accuracy": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 5,
+        "tn": 0,
+        "fp": 0,
+        "fn": 0
+      },
+      "predictions": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "trajectory": {
+        "steps": [
+          {
+            "phase": "PROBE",
+            "description": "Examine data structure, count users and transactions",
+            "code": "# Count users and transactions\nusers = group_by_user(context)  # 1 users\nfor uid, txns in users.items():\n    print(f'{uid}: {len(txns)} txns')\ntime_range = (min(timestamps), max(timestamps))",
+            "output": "Users: {\"U_VEL_01\": 5}\nTime range: 178s (0.0 hours)\nTotal transactions: 5",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.02002716064453125
+          },
+          {
+            "phase": "FILTER",
+            "description": "Run deterministic fraud pattern filters",
+            "code": "velocity_flags  = velocity_filter(context, window=300s, min=3)\namount_flags    = amount_anomaly_filter(context, sigma=3.0)\ngeo_flags       = geo_filter(context, max_sec=600)\ndevice_flags    = device_shift_filter(context)\nsuspicious_ids  = union(all flagged txn_ids)",
+            "output": "velocity_filter:       1 users flagged ({\"U_VEL_01\": [\"TXN_S1_001\", \"TXN_S1_002\", \"TXN_S1_003\", \"TXN_S1_004\", \"TXN_S1_005\"]})\namount_anomaly_filter: 0 txns flagged (none)\ngeo_filter:            0 users flagged (none)\ndevice_shift_filter:   0 users flagged (none)\nTotal suspicious: 5/5 transactions (0% filtered out)",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.20885467529296875
+          },
+          {
+            "phase": "ANALYZE",
+            "description": "LLM sub-calls verify flagged transactions per user",
+            "code": "# Per-user sub-calls with context folding\nfor user in flagged_users:\n    user_txns = get_user_context(user)  # flagged + baseline\n    result = llm_query(user_txns, filter_findings)\n    if result.verdict == 'fraud':\n        confirmed.add(result.txn_ids)",
+            "output": "1 sub-calls (1 per user):\nllm_query(user=U_VEL_01, 5 flagged txns + 0 baseline) \u2192 387 tokens\n  Response: {\"verdict\": \"fraud\", \"reasoning\": \"All flagged transactions exhibit a high transaction velocity, with 5 transactions occurring within a short time frame of 178 seconds. This pattern is indicative of p\n\u2192 Confirmed fraud: ['TXN_S1_001', 'TXN_S1_002', 'TXN_S1_003', 'TXN_S1_004', 'TXN_S1_005']",
+            "tokens": 387,
+            "cost": 0.00010709999999999999,
+            "duration_ms": 2564.485788345337
+          },
+          {
+            "phase": "AGGREGATE",
+            "description": "Merge sub-call results into final answer",
+            "code": "answer['fraudulent_ids'] = merge(confirmed_ids)\nanswer['reasoning'] = merge(sub_call_reasoning)\nanswer['ready'] = True",
+            "output": "Final fraud IDs: ['TXN_S1_001', 'TXN_S1_002', 'TXN_S1_003', 'TXN_S1_004', 'TXN_S1_005']\nTotal flagged: 5/5 transactions",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.0057220458984375
+          }
+        ],
+        "total_tokens": 387,
+        "total_cost": 0.00010709999999999999,
+        "total_duration_ms": 2564.720392227173
+      },
+      "filtered_count": 5,
+      "total_count": 5
+    },
+    "naive": {
+      "tokens": 23167,
+      "cost": 0.00357495,
+      "time": 5.073536157608032,
+      "accuracy": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 5,
+        "tn": 0,
+        "fp": 0,
+        "fn": 0
+      },
+      "predictions": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    }
+  },
+  "2": {
+    "rlm": {
+      "tokens": 368,
+      "cost": 0.00010065,
+      "time": 2.7440738677978516,
+      "accuracy": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 2,
+        "tn": 2,
+        "fp": 0,
+        "fn": 0
+      },
+      "predictions": [
+        false,
+        false,
+        true,
+        true
+      ],
+      "trajectory": {
+        "steps": [
+          {
+            "phase": "PROBE",
+            "description": "Examine data structure, count users and transactions",
+            "code": "# Count users and transactions\nusers = group_by_user(context)  # 1 users\nfor uid, txns in users.items():\n    print(f'{uid}: {len(txns)} txns')\ntime_range = (min(timestamps), max(timestamps))",
+            "output": "Users: {\"U_GEO_01\": 4}\nTime range: 600s (0.2 hours)\nTotal transactions: 4",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.054836273193359375
+          },
+          {
+            "phase": "FILTER",
+            "description": "Run deterministic fraud pattern filters",
+            "code": "velocity_flags  = velocity_filter(context, window=300s, min=3)\namount_flags    = amount_anomaly_filter(context, sigma=3.0)\ngeo_flags       = geo_filter(context, max_sec=600)\ndevice_flags    = device_shift_filter(context)\nsuspicious_ids  = union(all flagged txn_ids)",
+            "output": "velocity_filter:       0 users flagged (none)\namount_anomaly_filter: 0 txns flagged (none)\ngeo_filter:            1 users flagged ({\"U_GEO_01\": \"NYC->Tokyo\"})\ndevice_shift_filter:   1 users flagged ({\"U_GEO_01\": [\"TXN_S2_003\", \"TXN_S2_004\"]})\nTotal suspicious: 2/4 transactions (50% filtered out)",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.47898292541503906
+          },
+          {
+            "phase": "ANALYZE",
+            "description": "LLM sub-calls verify flagged transactions per user",
+            "code": "# Per-user sub-calls with context folding\nfor user in flagged_users:\n    user_txns = get_user_context(user)  # flagged + baseline\n    result = llm_query(user_txns, filter_findings)\n    if result.verdict == 'fraud':\n        confirmed.add(result.txn_ids)",
+            "output": "1 sub-calls (1 per user):\nllm_query(user=U_GEO_01, 2 flagged txns + 2 baseline) \u2192 368 tokens\n  Response: {\"verdict\": \"fraud\", \"reasoning\": \"Both flagged transactions exhibit significant anomalies: a sudden geographical shift from NYC to Tokyo within a short time frame (500 seconds) and a device shift fro\n\u2192 Confirmed fraud: ['TXN_S2_003', 'TXN_S2_004']",
+            "tokens": 368,
+            "cost": 0.00010065,
+            "duration_ms": 2741.5108680725098
+          },
+          {
+            "phase": "AGGREGATE",
+            "description": "Merge sub-call results into final answer",
+            "code": "answer['fraudulent_ids'] = merge(confirmed_ids)\nanswer['reasoning'] = merge(sub_call_reasoning)\nanswer['ready'] = True",
+            "output": "Final fraud IDs: ['TXN_S2_003', 'TXN_S2_004']\nTotal flagged: 2/4 transactions",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.0040531158447265625
+          }
+        ],
+        "total_tokens": 368,
+        "total_cost": 0.00010065,
+        "total_duration_ms": 2742.048740386963
+      },
+      "filtered_count": 2,
+      "total_count": 4
+    },
+    "naive": {
+      "tokens": 23013,
+      "cost": 0.0035068499999999997,
+      "time": 2.9401159286499023,
+      "accuracy": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 2,
+        "tn": 2,
+        "fp": 0,
+        "fn": 0
+      },
+      "predictions": [
+        false,
+        false,
+        true,
+        true
+      ]
+    }
+  },
+  "3": {
+    "rlm": {
+      "tokens": 379,
+      "cost": 0.00010635,
+      "time": 3.1800670623779297,
+      "accuracy": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 1,
+        "tn": 4,
+        "fp": 0,
+        "fn": 0
+      },
+      "predictions": [
+        false,
+        false,
+        false,
+        false,
+        true
+      ],
+      "trajectory": {
+        "steps": [
+          {
+            "phase": "PROBE",
+            "description": "Examine data structure, count users and transactions",
+            "code": "# Count users and transactions\nusers = group_by_user(context)  # 1 users\nfor uid, txns in users.items():\n    print(f'{uid}: {len(txns)} txns')\ntime_range = (min(timestamps), max(timestamps))",
+            "output": "Users: {\"U_AMT_01\": 5}\nTime range: 14400s (4.0 hours)\nTotal transactions: 5",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.030040740966796875
+          },
+          {
+            "phase": "FILTER",
+            "description": "Run deterministic fraud pattern filters",
+            "code": "velocity_flags  = velocity_filter(context, window=300s, min=3)\namount_flags    = amount_anomaly_filter(context, sigma=3.0)\ngeo_flags       = geo_filter(context, max_sec=600)\ndevice_flags    = device_shift_filter(context)\nsuspicious_ids  = union(all flagged txn_ids)",
+            "output": "velocity_filter:       0 users flagged (none)\namount_anomaly_filter: 1 txns flagged ({\"TXN_S3_005\": \"z=170.61\"})\ngeo_filter:            0 users flagged (none)\ndevice_shift_filter:   1 users flagged ({\"U_AMT_01\": [\"TXN_S3_005\"]})\nTotal suspicious: 1/5 transactions (80% filtered out)",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.3771781921386719
+          },
+          {
+            "phase": "ANALYZE",
+            "description": "LLM sub-calls verify flagged transactions per user",
+            "code": "# Per-user sub-calls with context folding\nfor user in flagged_users:\n    user_txns = get_user_context(user)  # flagged + baseline\n    result = llm_query(user_txns, filter_findings)\n    if result.verdict == 'fraud':\n        confirmed.add(result.txn_ids)",
+            "output": "1 sub-calls (1 per user):\nllm_query(user=U_AMT_01, 1 flagged txns + 4 baseline) \u2192 379 tokens\n  Response: {\n  \"verdict\": \"fraud\",\n  \"reasoning\": \"The flagged transaction TXN_S3_005 shows a significant amount anomaly with a transaction amount of $487.50 compared to the user's normal transaction amounts, wh\n\u2192 Confirmed fraud: ['TXN_S3_005']",
+            "tokens": 379,
+            "cost": 0.00010635,
+            "duration_ms": 3178.3132553100586
+          },
+          {
+            "phase": "AGGREGATE",
+            "description": "Merge sub-call results into final answer",
+            "code": "answer['fraudulent_ids'] = merge(confirmed_ids)\nanswer['reasoning'] = merge(sub_call_reasoning)\nanswer['ready'] = True",
+            "output": "Final fraud IDs: ['TXN_S3_005']\nTotal flagged: 1/5 transactions",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.0030994415283203125
+          }
+        ],
+        "total_tokens": 379,
+        "total_cost": 0.00010635,
+        "total_duration_ms": 3178.7235736846924
+      },
+      "filtered_count": 1,
+      "total_count": 5
+    },
+    "naive": {
+      "tokens": 23040,
+      "cost": 0.00349875,
+      "time": 23.055481672286987,
+      "accuracy": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 1,
+        "tn": 4,
+        "fp": 0,
+        "fn": 0
+      },
+      "predictions": [
+        false,
+        false,
+        false,
+        false,
+        true
+      ]
+    }
+  },
+  "4": {
+    "rlm": {
+      "tokens": 385,
+      "cost": 0.00010904999999999998,
+      "time": 2.273207902908325,
+      "accuracy": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 2,
+        "tn": 3,
+        "fp": 0,
+        "fn": 0
+      },
+      "predictions": [
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "trajectory": {
+        "steps": [
+          {
+            "phase": "PROBE",
+            "description": "Examine data structure, count users and transactions",
+            "code": "# Count users and transactions\nusers = group_by_user(context)  # 1 users\nfor uid, txns in users.items():\n    print(f'{uid}: {len(txns)} txns')\ntime_range = (min(timestamps), max(timestamps))",
+            "output": "Users: {\"U_ATO_01\": 5}\nTime range: 11400s (3.2 hours)\nTotal transactions: 5",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.03314018249511719
+          },
+          {
+            "phase": "FILTER",
+            "description": "Run deterministic fraud pattern filters",
+            "code": "velocity_flags  = velocity_filter(context, window=300s, min=3)\namount_flags    = amount_anomaly_filter(context, sigma=3.0)\ngeo_flags       = geo_filter(context, max_sec=600)\ndevice_flags    = device_shift_filter(context)\nsuspicious_ids  = union(all flagged txn_ids)",
+            "output": "velocity_filter:       0 users flagged (none)\namount_anomaly_filter: 0 txns flagged (none)\ngeo_filter:            0 users flagged (none)\ndevice_shift_filter:   1 users flagged ({\"U_ATO_01\": [\"TXN_S4_004\", \"TXN_S4_005\"]})\nTotal suspicious: 2/5 transactions (60% filtered out)",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.3609657287597656
+          },
+          {
+            "phase": "ANALYZE",
+            "description": "LLM sub-calls verify flagged transactions per user",
+            "code": "# Per-user sub-calls with context folding\nfor user in flagged_users:\n    user_txns = get_user_context(user)  # flagged + baseline\n    result = llm_query(user_txns, filter_findings)\n    if result.verdict == 'fraud':\n        confirmed.add(result.txn_ids)",
+            "output": "1 sub-calls (1 per user):\nllm_query(user=U_ATO_01, 2 flagged txns + 3 baseline) \u2192 385 tokens\n  Response: {\"verdict\": \"fraud\", \"reasoning\": \"Both flagged transactions show significant anomalies compared to the user's normal transaction behavior. The user typically makes small purchases (under $30) in cate\n\u2192 Confirmed fraud: ['TXN_S4_004', 'TXN_S4_005']",
+            "tokens": 385,
+            "cost": 0.00010904999999999998,
+            "duration_ms": 2271.4312076568604
+          },
+          {
+            "phase": "AGGREGATE",
+            "description": "Merge sub-call results into final answer",
+            "code": "answer['fraudulent_ids'] = merge(confirmed_ids)\nanswer['reasoning'] = merge(sub_call_reasoning)\nanswer['ready'] = True",
+            "output": "Final fraud IDs: ['TXN_S4_004', 'TXN_S4_005']\nTotal flagged: 2/5 transactions",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.003814697265625
+          }
+        ],
+        "total_tokens": 385,
+        "total_cost": 0.00010904999999999998,
+        "total_duration_ms": 2271.829128265381
+      },
+      "filtered_count": 2,
+      "total_count": 5
+    },
+    "naive": {
+      "tokens": 23112,
+      "cost": 0.0035415,
+      "time": 5.069702863693237,
+      "accuracy": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 2,
+        "tn": 3,
+        "fp": 0,
+        "fn": 0
+      },
+      "predictions": [
+        false,
+        false,
+        false,
+        true,
+        true
+      ]
+    }
+  },
+  "5": {
+    "rlm": {
+      "tokens": 511,
+      "cost": 0.0001401,
+      "time": 2.843475341796875,
+      "accuracy": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 8,
+        "tn": 0,
+        "fp": 0,
+        "fn": 0
+      },
+      "predictions": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "trajectory": {
+        "steps": [
+          {
+            "phase": "PROBE",
+            "description": "Examine data structure, count users and transactions",
+            "code": "# Count users and transactions\nusers = group_by_user(context)  # 1 users\nfor uid, txns in users.items():\n    print(f'{uid}: {len(txns)} txns')\ntime_range = (min(timestamps), max(timestamps))",
+            "output": "Users: {\"U_MICRO_01\": 8}\nTime range: 105s (0.0 hours)\nTotal transactions: 8",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.04315376281738281
+          },
+          {
+            "phase": "FILTER",
+            "description": "Run deterministic fraud pattern filters",
+            "code": "velocity_flags  = velocity_filter(context, window=300s, min=3)\namount_flags    = amount_anomaly_filter(context, sigma=3.0)\ngeo_flags       = geo_filter(context, max_sec=600)\ndevice_flags    = device_shift_filter(context)\nsuspicious_ids  = union(all flagged txn_ids)",
+            "output": "velocity_filter:       1 users flagged ({\"U_MICRO_01\": [\"TXN_S5_001\", \"TXN_S5_002\", \"TXN_S5_003\", \"TXN_S5_004\", \"TXN_S5_005\", \"TXN_S5_006\", \"TXN_S5_007\", \"TXN_S5_008\"]})\namount_anomaly_filter: 0 txns flagged (none)\ngeo_filter:            0 users flagged (none)\ndevice_shift_filter:   0 users flagged (none)\nTotal suspicious: 8/8 transactions (0% filtered out)",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.6771087646484375
+          },
+          {
+            "phase": "ANALYZE",
+            "description": "LLM sub-calls verify flagged transactions per user",
+            "code": "# Per-user sub-calls with context folding\nfor user in flagged_users:\n    user_txns = get_user_context(user)  # flagged + baseline\n    result = llm_query(user_txns, filter_findings)\n    if result.verdict == 'fraud':\n        confirmed.add(result.txn_ids)",
+            "output": "1 sub-calls (1 per user):\nllm_query(user=U_MICRO_01, 8 flagged txns + 0 baseline) \u2192 511 tokens\n  Response: {\"verdict\": \"fraud\", \"reasoning\": \"All flagged transactions exhibit a high velocity pattern, with 8 transactions occurring in a very short time frame (105 seconds). This is indicative of potentially f\n\u2192 Confirmed fraud: ['TXN_S5_001', 'TXN_S5_002', 'TXN_S5_003', 'TXN_S5_004', 'TXN_S5_005', 'TXN_S5_006', 'TXN_S5_007', 'TXN_S5_008']",
+            "tokens": 511,
+            "cost": 0.0001401,
+            "duration_ms": 2841.1009311676025
+          },
+          {
+            "phase": "AGGREGATE",
+            "description": "Merge sub-call results into final answer",
+            "code": "answer['fraudulent_ids'] = merge(confirmed_ids)\nanswer['reasoning'] = merge(sub_call_reasoning)\nanswer['ready'] = True",
+            "output": "Final fraud IDs: ['TXN_S5_001', 'TXN_S5_002', 'TXN_S5_003', 'TXN_S5_004', 'TXN_S5_005', 'TXN_S5_006', 'TXN_S5_007', 'TXN_S5_008']\nTotal flagged: 8/8 transactions",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.003814697265625
+          }
+        ],
+        "total_tokens": 511,
+        "total_cost": 0.0001401,
+        "total_duration_ms": 2841.825008392334
+      },
+      "filtered_count": 8,
+      "total_count": 8
+    },
+    "naive": {
+      "tokens": 23527,
+      "cost": 0.0037144499999999998,
+      "time": 7.646653890609741,
+      "accuracy": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 8,
+        "tn": 0,
+        "fp": 0,
+        "fn": 0
+      },
+      "predictions": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    }
+  },
+  "6": {
+    "rlm": {
+      "tokens": 0,
+      "cost": 0.0,
+      "time": 0.0020601749420166016,
+      "accuracy": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 0,
+        "tn": 4,
+        "fp": 0,
+        "fn": 0
+      },
+      "predictions": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "trajectory": {
+        "steps": [
+          {
+            "phase": "PROBE",
+            "description": "Examine data structure, count users and transactions",
+            "code": "# Count users and transactions\nusers = group_by_user(context)  # 1 users\nfor uid, txns in users.items():\n    print(f'{uid}: {len(txns)} txns')\ntime_range = (min(timestamps), max(timestamps))",
+            "output": "Users: {\"U_LEGIT_01\": 4}\nTime range: 21600s (6.0 hours)\nTotal transactions: 4",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.04315376281738281
+          },
+          {
+            "phase": "FILTER",
+            "description": "Run deterministic fraud pattern filters",
+            "code": "velocity_flags  = velocity_filter(context, window=300s, min=3)\namount_flags    = amount_anomaly_filter(context, sigma=3.0)\ngeo_flags       = geo_filter(context, max_sec=600)\ndevice_flags    = device_shift_filter(context)\nsuspicious_ids  = union(all flagged txn_ids)",
+            "output": "velocity_filter:       0 users flagged (none)\namount_anomaly_filter: 0 txns flagged (none)\ngeo_filter:            0 users flagged (none)\ndevice_shift_filter:   0 users flagged (none)\nTotal suspicious: 0/4 transactions (100% filtered out)",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.3151893615722656
+          },
+          {
+            "phase": "ANALYZE",
+            "description": "LLM sub-calls verify flagged transactions per user",
+            "code": "# Per-user sub-calls with context folding\nfor user in flagged_users:\n    user_txns = get_user_context(user)  # flagged + baseline\n    result = llm_query(user_txns, filter_findings)\n    if result.verdict == 'fraud':\n        confirmed.add(result.txn_ids)",
+            "output": "No suspicious transactions flagged. Skipping LLM sub-calls.",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.0019073486328125
+          },
+          {
+            "phase": "AGGREGATE",
+            "description": "Merge sub-call results into final answer",
+            "code": "answer['fraudulent_ids'] = merge(confirmed_ids)\nanswer['reasoning'] = merge(sub_call_reasoning)\nanswer['ready'] = True",
+            "output": "Final fraud IDs: []\nTotal flagged: 0/4 transactions",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.0040531158447265625
+          }
+        ],
+        "total_tokens": 0,
+        "total_cost": 0.0,
+        "total_duration_ms": 0.3643035888671875
+      },
+      "filtered_count": 0,
+      "total_count": 4
+    },
+    "naive": {
+      "tokens": 23009,
+      "cost": 0.00350265,
+      "time": 4.682039976119995,
+      "accuracy": {
+        "accuracy": 0.75,
+        "precision": 0.0,
+        "recall": 1.0,
+        "f1": 0.0,
+        "tp": 0,
+        "tn": 3,
+        "fp": 1,
+        "fn": 0
+      },
+      "predictions": [
+        false,
+        false,
+        false,
+        true
+      ]
+    }
+  },
+  "7": {
+    "rlm": {
+      "tokens": 662,
+      "cost": 0.00018435,
+      "time": 25.34933590888977,
+      "accuracy": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 4,
+        "tn": 11,
+        "fp": 0,
+        "fn": 0
+      },
+      "predictions": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false
+      ],
+      "trajectory": {
+        "steps": [
+          {
+            "phase": "PROBE",
+            "description": "Examine data structure, count users and transactions",
+            "code": "# Count users and transactions\nusers = group_by_user(context)  # 5 users\nfor uid, txns in users.items():\n    print(f'{uid}: {len(txns)} txns')\ntime_range = (min(timestamps), max(timestamps))",
+            "output": "Users: {\"U_MIX_A\": 3, \"U_MIX_B\": 3, \"U_MIX_C\": 3, \"U_MIX_D\": 4, \"U_MIX_E\": 2}\nTime range: 10800s (3.0 hours)\nTotal transactions: 15",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.051975250244140625
+          },
+          {
+            "phase": "FILTER",
+            "description": "Run deterministic fraud pattern filters",
+            "code": "velocity_flags  = velocity_filter(context, window=300s, min=3)\namount_flags    = amount_anomaly_filter(context, sigma=3.0)\ngeo_flags       = geo_filter(context, max_sec=600)\ndevice_flags    = device_shift_filter(context)\nsuspicious_ids  = union(all flagged txn_ids)",
+            "output": "velocity_filter:       1 users flagged ({\"U_MIX_B\": [\"TXN_S7_004\", \"TXN_S7_005\", \"TXN_S7_006\"]})\namount_anomaly_filter: 1 txns flagged ({\"TXN_S7_013\": \"z=146.72\"})\ngeo_filter:            0 users flagged (none)\ndevice_shift_filter:   1 users flagged ({\"U_MIX_D\": [\"TXN_S7_013\"]})\nTotal suspicious: 4/15 transactions (73% filtered out)",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.6289482116699219
+          },
+          {
+            "phase": "ANALYZE",
+            "description": "LLM sub-calls verify flagged transactions per user",
+            "code": "# Per-user sub-calls with context folding\nfor user in flagged_users:\n    user_txns = get_user_context(user)  # flagged + baseline\n    result = llm_query(user_txns, filter_findings)\n    if result.verdict == 'fraud':\n        confirmed.add(result.txn_ids)",
+            "output": "2 sub-calls (1 per user):\nllm_query(user=U_MIX_B, 3 flagged txns + 0 baseline) \u2192 305 tokens\n  Response: {\"verdict\": \"fraud\", \"reasoning\": \"The transactions are flagged due to a high velocity of three transactions occurring within a short time frame of 65 seconds, which is indicative of potentially fraud\nllm_query(user=U_MIX_D, 1 flagged txns + 3 baseline) \u2192 357 tokens\n  Response: {\"verdict\": \"fraud\", \"reasoning\": \"The transaction TXN_S7_013 shows a significant amount anomaly, with a transaction amount of $550.00 compared to the user's normal transaction amounts which average a\n\u2192 Confirmed fraud: ['TXN_S7_004', 'TXN_S7_005', 'TXN_S7_006', 'TXN_S7_013']",
+            "tokens": 662,
+            "cost": 0.00018435,
+            "duration_ms": 25346.71187400818
+          },
+          {
+            "phase": "AGGREGATE",
+            "description": "Merge sub-call results into final answer",
+            "code": "answer['fraudulent_ids'] = merge(confirmed_ids)\nanswer['reasoning'] = merge(sub_call_reasoning)\nanswer['ready'] = True",
+            "output": "Final fraud IDs: ['TXN_S7_004', 'TXN_S7_005', 'TXN_S7_006', 'TXN_S7_013']\nTotal flagged: 4/15 transactions",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.0040531158447265625
+          }
+        ],
+        "total_tokens": 662,
+        "total_cost": 0.00018435,
+        "total_duration_ms": 25347.396850585938
+      },
+      "filtered_count": 4,
+      "total_count": 15
+    },
+    "naive": {
+      "tokens": 23663,
+      "cost": 0.0036363000000000003,
+      "time": 5.53630805015564,
+      "accuracy": {
+        "accuracy": 0.9333333333333333,
+        "precision": 1.0,
+        "recall": 0.75,
+        "f1": 0.8571428571428571,
+        "tp": 3,
+        "tn": 11,
+        "fp": 0,
+        "fn": 1
+      },
+      "predictions": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false
+      ]
+    }
+  },
+  "8": {
+    "rlm": {
+      "tokens": 367,
+      "cost": 8.969999999999998e-05,
+      "time": 1.8038759231567383,
+      "accuracy": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 4,
+        "tn": 1,
+        "fp": 0,
+        "fn": 0
+      },
+      "predictions": [
+        false,
+        true,
+        true,
+        true,
+        true
+      ],
+      "trajectory": {
+        "steps": [
+          {
+            "phase": "PROBE",
+            "description": "Examine data structure, count users and transactions",
+            "code": "# Count users and transactions\nusers = group_by_user(context)  # 1 users\nfor uid, txns in users.items():\n    print(f'{uid}: {len(txns)} txns')\ntime_range = (min(timestamps), max(timestamps))",
+            "output": "Users: {\"U_XBORDER_01\": 5}\nTime range: 1800s (0.5 hours)\nTotal transactions: 5",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.04291534423828125
+          },
+          {
+            "phase": "FILTER",
+            "description": "Run deterministic fraud pattern filters",
+            "code": "velocity_flags  = velocity_filter(context, window=300s, min=3)\namount_flags    = amount_anomaly_filter(context, sigma=3.0)\ngeo_flags       = geo_filter(context, max_sec=600)\ndevice_flags    = device_shift_filter(context)\nsuspicious_ids  = union(all flagged txn_ids)",
+            "output": "velocity_filter:       0 users flagged (none)\namount_anomaly_filter: 0 txns flagged (none)\ngeo_filter:            1 users flagged ({\"U_XBORDER_01\": \"London->Paris\"})\ndevice_shift_filter:   1 users flagged ({\"U_XBORDER_01\": [\"TXN_S8_004\"]})\nTotal suspicious: 4/5 transactions (20% filtered out)",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.34689903259277344
+          },
+          {
+            "phase": "ANALYZE",
+            "description": "LLM sub-calls verify flagged transactions per user",
+            "code": "# Per-user sub-calls with context folding\nfor user in flagged_users:\n    user_txns = get_user_context(user)  # flagged + baseline\n    result = llm_query(user_txns, filter_findings)\n    if result.verdict == 'fraud':\n        confirmed.add(result.txn_ids)",
+            "output": "1 sub-calls (1 per user):\nllm_query(user=U_XBORDER_01, 4 flagged txns + 1 baseline) \u2192 367 tokens\n  Response: {\"verdict\": \"fraud\", \"reasoning\": \"All flagged transactions exhibit clear anomalies, including rapid geographical shifts and device changes that are inconsistent with the user's normal transaction beh\n\u2192 Confirmed fraud: ['TXN_S8_002', 'TXN_S8_003', 'TXN_S8_004', 'TXN_S8_005']",
+            "tokens": 367,
+            "cost": 8.969999999999998e-05,
+            "duration_ms": 1801.7940521240234
+          },
+          {
+            "phase": "AGGREGATE",
+            "description": "Merge sub-call results into final answer",
+            "code": "answer['fraudulent_ids'] = merge(confirmed_ids)\nanswer['reasoning'] = merge(sub_call_reasoning)\nanswer['ready'] = True",
+            "output": "Final fraud IDs: ['TXN_S8_002', 'TXN_S8_003', 'TXN_S8_004', 'TXN_S8_005']\nTotal flagged: 4/5 transactions",
+            "tokens": 0,
+            "cost": 0.0,
+            "duration_ms": 0.0040531158447265625
+          }
+        ],
+        "total_tokens": 367,
+        "total_cost": 8.969999999999998e-05,
+        "total_duration_ms": 1802.1879196166992
+      },
+      "filtered_count": 4,
+      "total_count": 5
+    },
+    "naive": {
+      "tokens": 23130,
+      "cost": 0.0035500500000000003,
+      "time": 27.713469982147217,
+      "accuracy": {
+        "accuracy": 0.8,
+        "precision": 1.0,
+        "recall": 0.75,
+        "f1": 0.8571428571428571,
+        "tp": 3,
+        "tn": 1,
+        "fp": 0,
+        "fn": 1
+      },
+      "predictions": [
+        false,
+        true,
+        true,
+        true,
+        false
+      ]
+    }
+  }
+}

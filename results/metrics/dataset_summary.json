@@ -1,0 +1,22 @@
+{
+  "dataset": {
+    "total_transactions": 10000,
+    "fraudulent": 200,
+    "legitimate": 9800,
+    "fraud_rate": 0.02,
+    "unique_users": 240,
+    "date_range_days": 29
+  },
+  "fraud_patterns": {
+    "velocity": 50,
+    "amount_anomaly": 50,
+    "geographic": 50,
+    "account_takeover": 50
+  },
+  "amount_stats": {
+    "legitimate_mean": 45.61333347047744,
+    "fraud_mean": 90.56486852589538,
+    "overall_mean": 46.5123641715858,
+    "overall_std": 43.7993682839908
+  }
+}

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if page.title %}{{ page.title }} | {{ site.title }}{% else %}{{ site.title }}{% endif %}</title>
+  <meta name="description" content="{{ page.description | default: site.description }}">
+  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+  <style>
+    .site-header { border-top: 5px solid #2ecc71; }
+    .github-link { float: right; padding: 10px 0; font-size: 14px; }
+    .github-link a { color: #666; text-decoration: none; }
+    .github-link a:hover { color: #2ecc71; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+    th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+    th { background-color: #f5f5f5; font-weight: 600; }
+    tr:nth-child(even) { background-color: #fafafa; }
+    code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-size: 0.9em; }
+    pre code { background: none; padding: 0; }
+    pre { background: #f8f8f8; padding: 16px; border-radius: 6px; overflow-x: auto; }
+    details { margin: 1em 0; }
+    details summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
+    details summary:hover { color: #2ecc71; }
+    .highlight-box { background: #f0faf0; border-left: 4px solid #2ecc71; padding: 12px 16px; margin: 1em 0; }
+    img { max-width: 100%; height: auto; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrapper">
+      <a class="site-title" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+      <nav class="site-nav">
+        {% for path in site.header_pages %}
+          {% assign my_page = site.pages | where: "path", path | first %}
+          {% if my_page %}
+            <a class="page-link" href="{{ my_page.url | relative_url }}">{{ my_page.title }}</a>
+          {% endif %}
+        {% endfor %}
+      </nav>
+      <div class="github-link">
+        <a href="https://github.com/Abivarma/rlm-fraud-detection-course">View on GitHub</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-content">
+    <div class="wrapper">
+      {{ content }}
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrapper">
+      <p>Built by <a href="https://github.com/Abivarma">Abivarma</a> | <a href="https://github.com/Abivarma/rlm-fraud-detection-course">Source Code</a> | MIT License</p>
+    </div>
+  </footer>
+</body>
+</html>

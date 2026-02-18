@@ -1,0 +1,18 @@
+title: "RLM Fraud Detection"
+description: "98.4% token reduction with Recursive Language Models for financial fraud detection"
+theme: minima
+baseurl: "/rlm-fraud-detection-course"
+url: "https://abivarma.github.io"
+
+author:
+  name: "Abivarma"
+  url: "https://github.com/Abivarma"
+
+header_pages:
+  - how-it-works.md
+  - results.md
+  - research.md
+  - architecture.md
+  - faq.md
+
+markdown: kramdown

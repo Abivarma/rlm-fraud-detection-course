@@ -5,38 +5,18 @@ __pycache__/
 *.so
 .Python
 build/
-develop-eggs/
 dist/
-downloads/
 eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
 *.egg-info/
-.installed.cfg
 *.egg
-MANIFEST
 
 # Virtual Environment
+.venv/
 venv/
 env/
-ENV/
-env.bak/
-venv.bak/
 
-# Jupyter Notebook
-.ipynb_checkpoints
-*.ipynb_checkpoints/
-
-# IPython
-profile_default/
-ipython_config.py
+# Jupyter
+.ipynb_checkpoints/
 
 # Environment variables
 .env
@@ -49,20 +29,13 @@ ipython_config.py
 *.swp
 *.swo
 *~
+
+# OS
 .DS_Store
 
-# Data files (optional - uncomment if you want to exclude large datasets)
-# data/*.csv
-# data/*.json
-
-# Results (keep structure, ignore contents if too large)
-results/metrics/*.json
-results/visualizations/*.png
-results/visualizations/*.pdf
-
-# Logs
-*.log
-logs/
+# Large raw datasets (demo data is tracked)
+data/sample_transactions.csv
+data/rlm_test_transactions.csv
 
 # ChromaDB
 chroma_db/
@@ -72,36 +45,22 @@ chroma_db/
 .pytest_cache/
 .coverage
 htmlcov/
-.tox/
 
 # MyPy
 .mypy_cache/
-.dmypy.json
-dmypy.json
+
+# Logs
+*.log
+logs/
+
+# Claude dev files
+.claude/
+
+# Generated notebook outputs (originals in results/)
+notebooks/*.png
 
 # Streamlit
 .streamlit/secrets.toml
 
-# MacOS
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# Thumbnails
-._*
-
-# Files that might appear in the root of a volume
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
-
-# Directories potentially created on remote AFP share
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.aclapprecache
+# Jekyll build output
+docs/_site/

@@ -9,6 +9,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import chromadb
 from chromadb.config import Settings
+from sentence_transformers import SentenceTransformer
 
 from src.metrics.tracker import AnalysisMetrics
 
@@ -58,6 +59,11 @@ class RAGFraudAgent:
         # Load historical fraud cases (500 cases for retrieval)
         self.historical_cases = self._load_historical_cases()
 
+        # Initialize local embedding model (no API calls needed!)
+        print("📦 Loading local embedding model (all-MiniLM-L6-v2)...")
+        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        print("✅ Local embedding model ready (no rate limits!)")
+
         # Initialize vector store with historical cases
         self.vector_store = self._build_vector_store()
 
@@ -81,7 +87,7 @@ class RAGFraudAgent:
             return json.load(f)
 
     def _embed_text(self, text: str) -> List[float]:
-        """Generate embedding for text using OpenAI API.
+        """Generate embedding for text using local Sentence Transformer model.
 
         Args:
             text: Text to embed
@@ -89,11 +95,9 @@ class RAGFraudAgent:
         Returns:
             Embedding vector
         """
-        response = self.client.embeddings.create(
-            model="text-embedding-3-small",
-            input=text
-        )
-        return response.data[0].embedding
+        # Use local model (no API calls, no rate limits!)
+        embedding = self.embedding_model.encode(text, convert_to_tensor=False)
+        return embedding.tolist()
 
     def _build_vector_store(self) -> chromadb.Collection:
         """Build vector database from historical fraud cases.
@@ -286,6 +290,21 @@ class RAGFraudAgent:
         )
 
         return predictions, metrics
+
+    def _transactions_to_text(self, transactions: pd.DataFrame) -> str:
+        """Convert transactions to text for embedding.
+
+        Args:
+            transactions: DataFrame with transactions
+
+        Returns:
+            Text representation of transactions
+        """
+        lines = []
+        for _, txn in transactions.iterrows():
+            line = f"User {txn['user_id']} spent ${txn['amount']:.2f} at {txn['location']} for {txn['category']}"
+            lines.append(line)
+        return ". ".join(lines)
 
     def _create_retrieval_query(self, transactions: pd.DataFrame) -> str:
         """Create query for pattern retrieval based on transaction characteristics.

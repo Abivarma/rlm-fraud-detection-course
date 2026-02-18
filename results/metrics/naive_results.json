@@ -1,0 +1,54 @@
+{
+  "approach": "naive",
+  "total_analyses": 2,
+  "summary": {
+    "tokens": {
+      "mean_total": 26934,
+      "mean_prompt": 26578,
+      "mean_completion": 356,
+      "std_total": 1677.2572849744906
+    },
+    "latency_ms": {
+      "mean": 6376.934051513672,
+      "median": 6376.934051513672,
+      "std": 2827.5076490990764,
+      "min": 4377.584218978882,
+      "max": 8376.283884048462
+    },
+    "cost_usd": {
+      "mean": 0.004200299999999999,
+      "total": 0.008400599999999998,
+      "std": 0.00017840304089336564
+    }
+  },
+  "history": [
+    {
+      "approach": "naive",
+      "total_tokens": 25748,
+      "prompt_tokens": 25277,
+      "completion_tokens": 471,
+      "latency_ms": 8376.283884048462,
+      "cost_usd": 0.0040741499999999995,
+      "transactions_analyzed": 50,
+      "context_size_chars": 83983,
+      "retrieval_latency_ms": null,
+      "code_execution_count": null,
+      "llm_query_calls": null,
+      "timestamp": "2026-02-17T03:46:26.613790+00:00"
+    },
+    {
+      "approach": "naive",
+      "total_tokens": 28120,
+      "prompt_tokens": 27879,
+      "completion_tokens": 241,
+      "latency_ms": 4377.584218978882,
+      "cost_usd": 0.004326449999999999,
+      "transactions_analyzed": 100,
+      "context_size_chars": 91603,
+      "retrieval_latency_ms": null,
+      "code_execution_count": null,
+      "llm_query_calls": null,
+      "timestamp": "2026-02-17T03:46:56.000640+00:00"
+    }
+  ]
+}

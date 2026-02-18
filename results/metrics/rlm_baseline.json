@@ -1,0 +1,15 @@
+{
+  "approach": "rlm",
+  "annual_cost": 11.33325,
+  "f1_score": 0.0,
+  "precision": 0.0,
+  "recall": 0.0,
+  "cost_per_100": 0.0003105,
+  "latency_ms": 3153.623104095459,
+  "filter_latency_ms": 26.777029037475586,
+  "transactions_filtered": 24,
+  "filter_rate": 0.76,
+  "batch_size": 100,
+  "cost_reduction_vs_naive": 92.8232153382103,
+  "cost_reduction_vs_rag": 75.58674371977828
+}
