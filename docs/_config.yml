@@ -1,6 +1,6 @@
-title: "RLM Fraud Detection"
-description: "98.4% token reduction with Recursive Language Models for financial fraud detection"
-baseurl: "/rlm-fraud-detection-course"
+title: "Smart LLM Fraud Detection"
+description: "97% cost reduction via deterministic pre-filtering for LLM-based fraud detection"
+baseurl: "/smart-llm-fraud-detection"
 url: "https://abivarma.github.io"
 
 author:

@@ -7,7 +7,7 @@ title: Results
 
 All results from live API calls to gpt-4o-mini with temperature=0.
 Cached for reproducibility in
-[`notebooks/rlm_demo_cache.json`](https://github.com/Abivarma/rlm-fraud-detection-course/blob/main/notebooks/rlm_demo_cache.json).
+[`notebooks/rlm_demo_cache.json`](https://github.com/Abivarma/smart-llm-fraud-detection/blob/main/notebooks/rlm_demo_cache.json).
 
 ---
 

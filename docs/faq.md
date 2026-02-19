@@ -390,4 +390,4 @@ or supplementing manual review with automated explainable decisions.
 ---
 
 *Last Updated: February 2026*
-*Questions or feedback: [Open an issue](https://github.com/Abivarma/rlm-fraud-detection-course/issues)*
+*Questions or feedback: [Open an issue](https://github.com/Abivarma/smart-llm-fraud-detection/issues)*

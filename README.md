@@ -1,24 +1,23 @@
-# RLM-Inspired Fraud Detection
+# Smart LLM Fraud Detection
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![Tests](https://img.shields.io/badge/tests-47%20passing-brightgreen.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-**98.4% fewer tokens. 100% accuracy on synthetic benchmarks. $1.98M/year savings at 10M txns/day.**
+**97% fewer LLM costs. 98.4% fewer tokens. $1.98M/year savings at 10M txns/day.**
 
-An **RLM-inspired orchestration pipeline** for financial fraud detection.
-Applies principles from the Recursive Language Model paradigm
-([arXiv:2512.24601](https://arxiv.org/abs/2512.24601)) -- context folding,
-symbolic filtering, targeted sub-calls -- to demonstrate how deterministic
-code-based filtering combined with LLM verification can replace brute-force
-context stuffing, cutting costs by 97% while improving accuracy.
+A **filter-then-verify pipeline** for LLM-based fraud detection. Instead
+of sending every transaction to the LLM, deterministic code filters handle
+data processing first and the LLM only verifies flagged subsets -- cutting
+API costs by 97% while improving accuracy on synthetic benchmarks.
 
-> **Not a true RLM.** The LLM does not control the reasoning loop. All
-> orchestration is hardcoded Python. This is a rule-gated LLM verifier
-> that borrows RLM principles, not a recursive model.
-> [See the full distinction.](https://abivarma.github.io/rlm-fraud-detection-course/architecture#how-this-differs-from-true-rlm-and-tool-calling)
+> **What this is**: A linear Python pipeline with hardcoded rule-based
+> filters and targeted LLM verification calls. Not an AI agent, not a
+> recursive model, not tool calling. The LLM has zero autonomy -- it
+> only confirms what the code already flagged.
+> [See how it compares to other approaches.](https://abivarma.github.io/smart-llm-fraud-detection/architecture#how-this-differs-from-true-rlm-and-tool-calling)
 
-> [Documentation Site](https://abivarma.github.io/rlm-fraud-detection-course/) |
+> [Documentation Site](https://abivarma.github.io/smart-llm-fraud-detection/) |
 > Built by [Abivarma](https://github.com/Abivarma) | February 2026
 
 ---
@@ -87,13 +86,13 @@ Based on gpt-4o-mini pricing ($0.15/1M input, $0.60/1M output tokens).
 - **Not a true RLM**: The LLM does not control the loop. All orchestration is deterministic Python. This is a code-controlled pipeline borrowing RLM principles.
 - **No drift handling**: No retraining pipeline, no threshold adaptation, no feedback loop.
 
-See [Enterprise FAQ](https://abivarma.github.io/rlm-fraud-detection-course/faq) for detailed discussion.
+See [Enterprise FAQ](https://abivarma.github.io/smart-llm-fraud-detection/faq) for detailed discussion.
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/Abivarma/rlm-fraud-detection-course.git
-cd rlm-fraud-detection-course
+git clone https://github.com/Abivarma/smart-llm-fraud-detection.git
+cd smart-llm-fraud-detection
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
@@ -147,11 +146,11 @@ jupyter notebook notebooks/05_rlm_benefits_demo.ipynb
 
 | Page | Description |
 |------|-------------|
-| [How It Works](https://abivarma.github.io/rlm-fraud-detection-course/how-it-works) | 4-phase REPL loop with real trajectory examples |
-| [Results](https://abivarma.github.io/rlm-fraud-detection-course/results) | All 8 scenarios with Naive vs RLM comparison |
-| [Research](https://abivarma.github.io/rlm-fraud-detection-course/research) | The RLM paradigm from arXiv:2512.24601 |
-| [Architecture](https://abivarma.github.io/rlm-fraud-detection-course/architecture) | Technical deep dive into all three agents |
-| [Enterprise FAQ](https://abivarma.github.io/rlm-fraud-detection-course/faq) | 16 questions on costs, scaling, production readiness |
+| [How It Works](https://abivarma.github.io/smart-llm-fraud-detection/how-it-works) | 4-phase REPL loop with real trajectory examples |
+| [Results](https://abivarma.github.io/smart-llm-fraud-detection/results) | All 8 scenarios with Naive vs RLM comparison |
+| [Research](https://abivarma.github.io/smart-llm-fraud-detection/research) | The RLM paradigm from arXiv:2512.24601 |
+| [Architecture](https://abivarma.github.io/smart-llm-fraud-detection/architecture) | Technical deep dive into all three agents |
+| [Enterprise FAQ](https://abivarma.github.io/smart-llm-fraud-detection/faq) | 16 questions on costs, scaling, production readiness |
 
 ## Key Files
 

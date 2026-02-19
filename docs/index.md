@@ -3,23 +3,23 @@ layout: default
 title: Home
 ---
 
-# RLM-Inspired Fraud Detection
+# Smart LLM Fraud Detection
 
-**98.4% fewer tokens. 100% accuracy on synthetic benchmarks. $1.98M/year savings at 10M transactions/day.**
+**97% fewer LLM costs. 98.4% fewer tokens. $1.98M/year savings at 10M transactions/day.**
 
-This project implements an **RLM-inspired orchestration pipeline** for
-financial fraud detection. Inspired by the Recursive Language Model paradigm
-([arXiv:2512.24601](https://arxiv.org/abs/2512.24601)), it uses deterministic
-code filters to process data and targets the LLM only at flagged subsets --
-outperforming naive context-stuffing on cost, accuracy, and auditability.
+A **filter-then-verify pipeline** for LLM-based fraud detection. Instead
+of stuffing every transaction into one massive LLM prompt, this system runs
+deterministic code filters first and only calls the LLM on the flagged
+subset -- cutting API costs by 97% while improving accuracy on synthetic
+benchmarks.
 
-> **Terminology note**: This is not a true Recursive Language Model where the
-> LLM controls its own reasoning loop. It is a **code-controlled pipeline**
-> that borrows key principles from the RLM paradigm -- context folding,
-> symbolic filtering, and targeted sub-calls. The control plane is
-> deterministic Python, not the model. See
-> [How This Differs from True RLM and Tool Calling](architecture#how-this-differs-from-true-rlm-and-tool-calling)
-> for a detailed comparison.
+> **What this is**: A linear Python pipeline with hardcoded rule-based
+> filters + targeted LLM verification. The LLM has zero autonomy -- code
+> controls everything. This is not an AI agent, not a recursive model,
+> and not tool calling. It borrows ideas from the RLM paradigm
+> ([arXiv:2512.24601](https://arxiv.org/abs/2512.24601)) but the
+> implementation is a straightforward sequential pipeline. See
+> [how it compares to other approaches](architecture#how-this-differs-from-true-rlm-and-tool-calling).
 
 ---
 
@@ -149,11 +149,10 @@ focus. That principle holds regardless of data source or scale.
 
 ## About This Project
 
-Built by [Abivarma](https://github.com/Abivarma) as a proof-of-concept
-applying principles from the RLM paradigm
-([arXiv:2512.24601](https://arxiv.org/abs/2512.24601)) to fraud detection.
-The implementation uses hardcoded deterministic fraud filters with targeted
-OpenAI gpt-4o-mini sub-calls for semantic verification -- an orchestration
-pattern, not a true recursive model.
+Built by [Abivarma](https://github.com/Abivarma) as a quantified case
+study showing how deterministic pre-filtering reduces LLM API costs by 97%.
+The implementation uses hardcoded Python filters with targeted OpenAI
+gpt-4o-mini sub-calls for semantic verification. Inspired by the RLM
+paradigm ([arXiv:2512.24601](https://arxiv.org/abs/2512.24601)).
 
-[View the source code on GitHub](https://github.com/Abivarma/rlm-fraud-detection-course)
+[View the source code on GitHub](https://github.com/Abivarma/smart-llm-fraud-detection)

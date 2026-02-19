@@ -246,7 +246,7 @@ for the full comparison.
 ## Source Code
 
 The complete implementation is in
-[`src/agents/rlm_repl_agent.py`](https://github.com/Abivarma/rlm-fraud-detection-course/blob/main/src/agents/rlm_repl_agent.py).
+[`src/agents/rlm_repl_agent.py`](https://github.com/Abivarma/smart-llm-fraud-detection/blob/main/src/agents/rlm_repl_agent.py).
 
 Key methods:
 - `_velocity_filter()` -- time-window based card testing detection

@@ -14,7 +14,7 @@ system relates to tool calling, true RLM, and standard LLM patterns.
 
 ## Approach 1: Naive Agent
 
-**File**: [`src/agents/naive_agent.py`](https://github.com/Abivarma/rlm-fraud-detection-course/blob/main/src/agents/naive_agent.py)
+**File**: [`src/agents/naive_agent.py`](https://github.com/Abivarma/smart-llm-fraud-detection/blob/main/src/agents/naive_agent.py)
 
 The baseline approach sends everything to the LLM in a single prompt:
 
@@ -51,7 +51,7 @@ For each transaction, return fraud/not-fraud with reasoning.
 
 ## Approach 2: RAG Agent
 
-**File**: [`src/agents/rag_agent.py`](https://github.com/Abivarma/rlm-fraud-detection-course/blob/main/src/agents/rag_agent.py)
+**File**: [`src/agents/rag_agent.py`](https://github.com/Abivarma/smart-llm-fraud-detection/blob/main/src/agents/rag_agent.py)
 
 RAG reduces prompt size by retrieving only relevant historical cases:
 
@@ -87,7 +87,7 @@ For each transaction, return fraud/not-fraud.
 
 ## Approach 3: RLM-Inspired Pipeline
 
-**File**: [`src/agents/rlm_repl_agent.py`](https://github.com/Abivarma/rlm-fraud-detection-course/blob/main/src/agents/rlm_repl_agent.py)
+**File**: [`src/agents/rlm_repl_agent.py`](https://github.com/Abivarma/smart-llm-fraud-detection/blob/main/src/agents/rlm_repl_agent.py)
 
 The RLM-inspired approach inverts the architecture: **hardcoded** code
 filters process data first, the LLM only verifies flagged subsets. All
@@ -319,7 +319,7 @@ the LLM" remain.
 
 ## Historical Note: The Old RLM Agent
 
-**File**: [`src/agents/rlm_agent.py`](https://github.com/Abivarma/rlm-fraud-detection-course/blob/main/src/agents/rlm_agent.py)
+**File**: [`src/agents/rlm_agent.py`](https://github.com/Abivarma/smart-llm-fraud-detection/blob/main/src/agents/rlm_agent.py)
 
 The original RLM implementation used `pydantic_ai_rlm` for one-shot code
 generation. In testing, this approach had critical failures:
@@ -339,7 +339,7 @@ filters and targeted sub-calls.
 
 ## Metrics and Evaluation
 
-**File**: [`src/metrics/tracker.py`](https://github.com/Abivarma/rlm-fraud-detection-course/blob/main/src/metrics/tracker.py)
+**File**: [`src/metrics/tracker.py`](https://github.com/Abivarma/smart-llm-fraud-detection/blob/main/src/metrics/tracker.py)
 
 All agents share a common metrics interface tracking:
 - Token usage (input + output, per call and total)
@@ -348,6 +348,6 @@ All agents share a common metrics interface tracking:
 - Accuracy metrics (TP, TN, FP, FN, precision, recall, F1)
 - Trajectory (for RLM: full phase-by-phase audit log)
 
-Results are stored in [`results/metrics/`](https://github.com/Abivarma/rlm-fraud-detection-course/tree/main/results/metrics)
+Results are stored in [`results/metrics/`](https://github.com/Abivarma/smart-llm-fraud-detection/tree/main/results/metrics)
 as JSON files, with visualizations in
-[`results/visualizations/`](https://github.com/Abivarma/rlm-fraud-detection-course/tree/main/results/visualizations).
+[`results/visualizations/`](https://github.com/Abivarma/smart-llm-fraud-detection/tree/main/results/visualizations).
