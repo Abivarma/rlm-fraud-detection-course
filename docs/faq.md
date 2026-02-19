@@ -5,8 +5,89 @@ title: Enterprise FAQ
 
 # Enterprise FAQ
 
-16 questions addressing cost claims, production readiness, accuracy,
-technical limitations, and deployment considerations.
+19 questions addressing terminology, scope, cost claims, production
+readiness, accuracy, technical limitations, and deployment considerations.
+
+---
+
+## Terminology and Scope
+
+### Q0a: Is this actually a Recursive Language Model?
+
+No. This is an **RLM-inspired orchestration pipeline**, not a true
+Recursive Language Model.
+
+In a true RLM (as described in [arXiv:2512.24601](https://arxiv.org/abs/2512.24601)),
+the LLM **controls the reasoning loop**: it generates code, executes it in
+a REPL, observes results, and decides what to do next. The model is both
+the reasoner and the controller.
+
+In this implementation, **Python code controls everything**. The 4-phase
+pipeline is fixed. The filters are hardcoded with fixed thresholds. The
+LLM is called at exactly one point for semantic verification. The model
+has no ability to change the pipeline, add filters, adjust thresholds, or
+recurse.
+
+What we borrow from RLM:
+- **Context folding**: Each LLM sub-call gets fresh, focused per-user context
+- **Symbolic filtering**: Code processes data before the LLM sees it
+- **Targeted sub-calls**: LLM only analyzes the flagged subset
+
+What differs:
+- **No model autonomy**: The LLM does not decide what to filter or when to recurse
+- **No code generation**: Filters are pre-built, not LLM-generated
+- **No iterative refinement**: The pipeline runs once, in a fixed order
+
+A more accurate label: **rule-gated LLM verifier** or **hybrid symbolic +
+LLM pipeline**. See
+[Architecture: How This Differs](architecture#how-this-differs-from-true-rlm-and-tool-calling)
+for the full comparison.
+
+### Q0b: How is this different from standard tool calling / function calling?
+
+In tool calling (OpenAI function calling, LangChain agents, etc.), the
+**LLM decides** which tools to invoke and when. The model has agency --
+it picks actions based on its reasoning.
+
+In this system, **code decides** everything:
+
+| Aspect | Tool Calling | This Project |
+|--------|-------------|-------------|
+| Who picks which function | LLM | Hardcoded Python |
+| Who decides execution order | LLM | Fixed 4-phase pipeline |
+| Can the LLM skip a step | Yes | No |
+| Can the LLM add analysis | Yes | No |
+| LLM autonomy | Medium | None |
+| Deterministic | No | Yes |
+| Reproducible | No | Yes |
+
+The trade-off: this system sacrifices flexibility for **determinism and
+reproducibility**. Same input always produces the same filter results.
+The LLM's only role is semantic confirmation of pre-computed findings.
+
+Both approaches can achieve the cost savings from "filter before LLM."
+The difference is who makes the filtering decisions.
+
+### Q0c: If the filters are hardcoded, isn't this just a rule engine with an LLM step?
+
+Essentially, yes -- and that is the point.
+
+The 4 filters (velocity, amount anomaly, geographic, device shift) are
+deterministic Python functions with fixed thresholds. They are rules. The
+LLM step adds:
+
+1. **Semantic judgment**: The LLM evaluates whether code-detected anomalies
+   constitute fraud in context (e.g., a z-score of 170 on a jewelry purchase
+   from a new device is different from a z-score of 170 on a recurring bill)
+2. **Natural language reasoning**: The audit trail includes human-readable
+   explanations, not just threshold triggers
+3. **Adaptability**: Changing fraud detection strategy requires updating a
+   prompt, not retraining a model
+
+The architecture is: **rules for cheap filtering + LLM for expensive
+judgment**. This is a well-established enterprise pattern (Stripe Radar,
+PayPal's fraud stack). The contribution is demonstrating the cost impact
+of this pattern quantitatively.
 
 ---
 
@@ -106,26 +187,32 @@ processing, not sub-second decisions.
 
 ### Q6: 100% accuracy sounds too good. What's the catch?
 
-The 100% accuracy is on 8 **synthetic scenarios** (51 transactions) with
-clear, unambiguous fraud patterns. Real-world fraud is messier:
+It is too good -- for real-world claims. The 100% accuracy is on 8
+**synthetic scenarios** (51 transactions) with clear, unambiguous fraud
+patterns designed to be detectable by the hardcoded filters. This is not
+a generalizable performance metric.
 
-- Synthetic: velocity attack = 5 txns in 3 minutes (obvious)
-- Real-world: sophisticated card testing with randomized timing (subtle)
+What the synthetic data lacks:
+- **Class imbalance**: Real fraud is ~0.1% of transactions. This dataset
+  is ~50% fraud by design.
+- **Subtle patterns**: Synthetic velocity = 5 txns in 3 minutes (obvious).
+  Real card testing uses randomized timing with delays.
+- **Adversarial behavior**: Real fraudsters adapt to known detection rules.
+- **Distribution shift**: Fraud tactics evolve; fixed thresholds decay.
+- **Scale effects**: 51 transactions vs millions with noise.
 
-The accuracy claim validates that the **architecture works correctly** --
-filters detect the right patterns, LLM sub-calls confirm correctly, and
-no false positives or negatives on well-defined scenarios.
+The accuracy claim validates that the **architecture works correctly on
+well-defined scenarios** -- filters detect the intended patterns, LLM
+sub-calls confirm correctly, and no false positives or negatives when
+patterns are unambiguous.
 
-Real-world accuracy would depend on:
-- Filter threshold tuning for your specific fraud patterns
-- LLM model choice and prompt engineering
-- Historical case quality
-- Fine-tuning on domain-specific data
-
-The proper RLM REPL agent achieved 100% vs Naive's 94% because:
+The pipeline achieved 100% vs Naive's 94% because:
 - Context folding prevents attention dilution (Naive missed fraud in Scenarios 7, 8)
 - Per-user sub-calls give focused analysis (Naive over-flagged in Scenario 6)
 - Deterministic filters catch mathematical patterns LLMs miss (z-scores, timing)
+
+Real-world deployment would require validation on large labeled datasets
+with proper cross-validation, class imbalance handling, and threshold tuning.
 
 ### Q7: What about the old RLM results showing F1=0.0?
 

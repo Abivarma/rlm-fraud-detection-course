@@ -3,17 +3,24 @@ layout: default
 title: How It Works
 ---
 
-# How the RLM REPL Loop Works
+# How the Pipeline Works
 
-The Recursive Language Model (RLM) paradigm, introduced in
-[arXiv:2512.24601](https://arxiv.org/abs/2512.24601), treats the LLM as an
-orchestrator rather than a data processor. Instead of feeding all data into
-the model's context window, the LLM interacts with data through a persistent
-Read-Eval-Print Loop (REPL), using code to filter and the LLM only for
-semantic judgment.
+This implementation is **inspired by** the Recursive Language Model (RLM)
+paradigm ([arXiv:2512.24601](https://arxiv.org/abs/2512.24601)), which treats
+the LLM as an orchestrator that interacts with data through a persistent REPL
+rather than ingesting it into the context window.
 
-This implementation applies the paradigm to fraud detection with a 4-phase
-pipeline.
+**Important distinction**: In a true RLM, the LLM controls the reasoning
+loop -- it decides what code to run, observes results, and iterates. In this
+implementation, the **control plane is hardcoded Python**. The 4-phase
+pipeline is fixed, the filters are pre-built, and the LLM is called only at
+a specific point (Phase 3) for semantic verification. The LLM does not
+decide what to filter or when to recurse.
+
+This is an **RLM-inspired orchestration pipeline**, not a true recursive
+model. What we borrow from RLM: context folding, symbolic filtering before
+LLM invocation, and targeted sub-calls. What differs: all orchestration
+logic is deterministic code, not model-driven.
 
 ---
 
@@ -42,8 +49,11 @@ This costs nothing and tells the system what it is working with.
 
 ### Phase 2: FILTER (0 LLM tokens)
 
-Run four deterministic fraud pattern filters. These are pure Python functions
-that execute in microseconds with zero LLM involvement:
+Run four **hardcoded** deterministic fraud pattern filters. These are pure
+Python functions with fixed thresholds, executing in microseconds with zero
+LLM involvement. The thresholds (e.g., 300-second window, z-score > 3.0)
+are chosen for the synthetic demo scenarios and would need tuning for
+real-world data:
 
 **Velocity Filter**: Flags users with 3+ transactions within a 300-second window.
 Catches card testing and bot attacks.
@@ -199,8 +209,8 @@ anomaly (z=170.61) before involving the LLM.
 
 **Context rot**: In a 23,000-token prompt, the model's attention is spread
 across 500 historical cases and all transactions. Critical signals get diluted.
-In Scenario 7 (Mixed Batch), Naive missed 1 of 4 fraud transactions. RLM
-caught all 4 because each sub-call had fresh, focused context.
+In Scenario 7 (Mixed Batch), Naive missed 1 of 4 fraud transactions. This
+pipeline caught all 4 because each sub-call had fresh, focused context.
 
 **Symbolic vs probabilistic**: Code filters produce deterministic results.
 `z-score = 170.61` is a fact, not a probability. The LLM is only asked
@@ -209,6 +219,27 @@ caught all 4 because each sub-call had fresh, focused context.
 **Context folding**: Each sub-call is independent. A 15-transaction batch
 with 5 users becomes 2 sub-calls (for the 2 flagged users), each seeing
 only their own transactions. No cross-contamination between users.
+
+---
+
+## What This Is Not
+
+This pipeline **borrows principles** from the RLM paper but differs in a
+fundamental way: **who controls the loop**.
+
+In a true RLM, the model generates code, executes it in a REPL, observes
+results, and decides what to do next. The model is the controller.
+
+In this implementation, every step is predetermined:
+- The pipeline always runs 4 phases in order
+- The filters are hardcoded Python with fixed thresholds
+- The LLM is called at exactly one point (Phase 3) with a fixed prompt template
+- The model has no ability to change the pipeline, add filters, or recurse
+
+This is closer to a **rule-gated LLM verifier** -- a valid and practical
+design pattern, but distinct from recursive self-directed reasoning.
+See [Architecture: How This Differs](architecture#how-this-differs-from-true-rlm-and-tool-calling)
+for the full comparison.
 
 ---
 

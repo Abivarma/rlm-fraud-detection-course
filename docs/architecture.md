@@ -7,7 +7,8 @@ title: Architecture
 
 This project implements three distinct approaches to LLM-based fraud
 detection, each progressively more efficient. This page covers their
-internal architecture and trade-offs.
+internal architecture, trade-offs, and an honest comparison of how this
+system relates to tool calling, true RLM, and standard LLM patterns.
 
 ---
 
@@ -84,12 +85,14 @@ For each transaction, return fraud/not-fraud.
 
 ---
 
-## Approach 3: RLM REPL Agent
+## Approach 3: RLM-Inspired Pipeline
 
 **File**: [`src/agents/rlm_repl_agent.py`](https://github.com/Abivarma/rlm-fraud-detection-course/blob/main/src/agents/rlm_repl_agent.py)
 
-The RLM approach inverts the architecture: code processes data first,
-the LLM only verifies flagged subsets.
+The RLM-inspired approach inverts the architecture: **hardcoded** code
+filters process data first, the LLM only verifies flagged subsets. All
+orchestration is deterministic Python -- the LLM does not control the
+pipeline.
 
 ```
 Phase 1: PROBE (code)
@@ -116,10 +119,11 @@ Phase 4: AGGREGATE (code)
 **Characteristics**:
 - Token usage: 300-700 per batch (only the flagged subset reaches the LLM)
 - Cost reduction: 97.1% vs Naive
-- Accuracy: 100% across all 8 test scenarios
+- Accuracy: 100% across all 8 synthetic test scenarios (see [Limitations](index#limitations))
 - Full audit trail: every filter trigger, every threshold, every sub-call logged
-- Deterministic filters: same input = same output, always
+- **Hardcoded filters**: fixed thresholds (300s window, z > 3.0, etc.) -- same input = same output, always
 - LLM temperature=0: consistent semantic judgments
+- **Code-controlled**: the pipeline is fixed; the LLM does not choose what to run
 
 ### Filter Details
 
@@ -174,17 +178,141 @@ the relevant user's data -- no context rot.
 
 ---
 
+## How This Differs from True RLM and Tool Calling
+
+This section addresses a fair criticism: this system is not a true Recursive
+Language Model. Here is an honest comparison of four approaches to
+LLM-based systems.
+
+### The Four Approaches
+
+**1. Standard Tool Calling / Function Calling**
+
+The LLM decides which tools to invoke and when. The model is the
+orchestrator -- it receives a list of available functions (e.g.,
+`search_transactions()`, `check_velocity()`, `flag_fraud()`), decides
+which to call based on the prompt, observes results, and decides next steps.
+
+```
+User: "Analyze these transactions for fraud"
+LLM:  "I'll call check_velocity(user_id='U001')"    <- LLM decides
+Tool: {result: "3 txns in 60s"}
+LLM:  "That's suspicious. I'll call flag_fraud()"    <- LLM decides
+Tool: {result: "flagged"}
+LLM:  "Transaction is likely fraud because..."
+```
+
+The LLM has **agency** -- it picks which tools to use and in what order.
+The code provides tools; the model provides strategy.
+
+**2. This Implementation (RLM-Inspired Pipeline)**
+
+Python code decides everything. The pipeline is **fixed and hardcoded**:
+always PROBE, then FILTER (4 specific filters with fixed thresholds), then
+ANALYZE (LLM sub-call), then AGGREGATE. The LLM is called at exactly one
+point with a fixed prompt template. It cannot change the pipeline, skip
+filters, adjust thresholds, or request additional analysis.
+
+```
+Code: probe(data)                                    <- code decides
+Code: velocity_filter(window=300s)                   <- code decides
+Code: amount_anomaly_filter(sigma=3.0)               <- code decides
+Code: geo_filter(max_travel=600s)                    <- code decides
+Code: device_shift_filter()                          <- code decides
+Code: if flagged_users: llm_query(subset)            <- code decides
+LLM:  "Given z-score=170.61, this is fraud"          <- LLM confirms
+Code: aggregate(results)                             <- code decides
+```
+
+The LLM has **no agency**. It is a verifier, not an orchestrator. The code
+provides both the tools AND the strategy.
+
+**3. True RLM (from the Paper)**
+
+The LLM operates inside a REPL environment. It generates code, executes it,
+observes results, and decides what to do next -- including writing new
+filters, adjusting parameters, or recursing with `llm_query` sub-calls.
+The model controls the loop.
+
+```
+LLM:  "Let me examine the data structure first"
+LLM:  >>> df.groupby('user_id').count()              <- LLM generates code
+REPL: {U001: 5 txns, U002: 3 txns}
+LLM:  "U001 has high volume. Let me check timing"
+LLM:  >>> df[df.user_id=='U001'].timestamp.diff()    <- LLM generates code
+REPL: [35s, 37s, 58s, 48s]
+LLM:  "Rapid succession. I'll use llm_query for deep analysis"
+LLM:  >>> llm_query("Analyze U001's 5 transactions")  <- LLM recurses
+Sub-LLM: "Velocity pattern indicates card testing"
+LLM:  >>> answer["fraudulent"] = ["TXN001", ...]     <- LLM finalizes
+```
+
+The LLM has **full agency**. It decides what code to write, what to
+investigate, when to recurse, and when to stop.
+
+**4. Agentic Tool Use (e.g., ReAct, LangChain Agents)**
+
+The LLM follows a Thought-Action-Observation loop with predefined tools.
+Similar to tool calling, but with explicit reasoning traces and iterative
+refinement.
+
+### Comparison Table
+
+| Aspect | Tool Calling | This Project | True RLM | Agentic (ReAct) |
+|--------|-------------|-------------|----------|-----------------|
+| Who controls the loop | LLM | **Code** | LLM | LLM |
+| Who picks which tools | LLM | **Code** | LLM (writes code) | LLM |
+| LLM generates code | No | No | **Yes** | No |
+| Filter logic | Predefined tools | **Hardcoded filters** | LLM-generated | Predefined tools |
+| Thresholds | Fixed or tool params | **Fixed** | LLM-chosen | Fixed or tool params |
+| LLM can recurse | Via tool calls | **No** | Yes (llm_query) | Via tool calls |
+| Deterministic | No (LLM chooses path) | **Yes** | No | No |
+| Reproducible | No | **Yes** | No | No |
+| LLM autonomy | Medium | **None** | Full | Medium |
+
+### So What IS This Project?
+
+The most accurate labels:
+
+- **Rule-gated LLM verifier**: Deterministic rules filter data, LLM
+  confirms findings
+- **Hybrid symbolic + LLM pipeline**: Code handles computation, LLM
+  handles semantic judgment
+- **RLM-inspired orchestration**: Borrows context folding, sub-calls,
+  and symbolic filtering from the RLM paradigm, but with hardcoded
+  control flow
+
+### What This Demonstrates
+
+The value is not in the "recursive" label -- it is in the **architectural
+principle**: use cheap deterministic computation to reduce what the
+expensive LLM sees. This principle is valid regardless of who controls
+the loop:
+
+- **98.4% token reduction** comes from code filters, not from recursion
+- **100% accuracy** (on synthetic data) comes from focused context, not
+  from model self-direction
+- **$1.98M/year savings** comes from the filter-then-verify pattern, not
+  from the LLM being a controller
+
+Whether you implement this as hardcoded filters (this project), tool
+calling, or a true RLM, the cost savings from "don't send everything to
+the LLM" remain.
+
+---
+
 ## Comparison Summary
 
-| Aspect | Naive | RAG | RLM |
-|--------|-------|-----|-----|
-| Prompt strategy | Everything in one shot | Retrieved subset + all txns | Code filters first, LLM on subset |
+| Aspect | Naive | RAG | RLM-Inspired |
+|--------|-------|-----|-------------|
+| Prompt strategy | Everything in one shot | Retrieved subset + all txns | Hardcoded filters first, LLM on subset |
 | Token usage (8 scenarios) | 185,661 | ~50,000 (est.) | 3,059 |
 | LLM calls per batch | 1 monolithic | 1 monolithic | N per-user sub-calls |
-| Filtering | None | Vector similarity | Deterministic code |
+| Filtering | None | Vector similarity | Deterministic code (fixed thresholds) |
+| Control plane | LLM (single call) | LLM (single call) | Python code (hardcoded) |
 | Audit trail | None | Retrieval sources | Full code trajectory |
 | Handles math patterns | No | No | Yes (z-scores, timing) |
-| Accuracy (8 scenarios) | 94% | -- | 100% |
+| Accuracy (8 synthetic scenarios) | 94% | -- | 100% |
 | Annual cost (10M/day) | $2,041,531 | ~$600,000 | $59,924 |
 
 ---

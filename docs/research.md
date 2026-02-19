@@ -3,11 +3,11 @@ layout: default
 title: Research
 ---
 
-# The RLM Paradigm
+# The RLM Paradigm and This Project
 
 This page summarizes the Recursive Language Model (RLM) paradigm as
-described in [arXiv:2512.24601](https://arxiv.org/abs/2512.24601) and how
-this project implements it for fraud detection.
+described in [arXiv:2512.24601](https://arxiv.org/abs/2512.24601), explains
+what this project borrows from it, and is transparent about where it diverges.
 
 ---
 
@@ -131,24 +131,37 @@ RLM averaged only $0.99 by filtering through the REPL.
 
 ## How This Project Maps to the Paper
 
-| Paper Concept | This Implementation |
-|--------------|-------------------|
-| Persistent REPL | `RLMREPLAgent.analyze()` -- 4-phase loop with state |
-| Symbolic filtering | `_velocity_filter()`, `_amount_anomaly_filter()`, `_geo_filter()`, `_device_shift_filter()` |
-| llm_query sub-calls | `_llm_query()` -- per-user sub-call with context folding |
-| Context folding | Each sub-call gets only 1 user's flagged + baseline txns |
-| Diffusion answer | `answer["ready"]` set only after all sub-calls merge |
-| Fail Fast, Fail Loud | Exceptions propagate; no silent fallback to monolithic LLM |
-| Trajectory logging | `Trajectory` and `TrajectoryStep` dataclasses |
+| Paper Concept | This Implementation | Faithful? |
+|--------------|-------------------|-----------|
+| Persistent REPL | `RLMREPLAgent.analyze()` -- 4-phase loop with state | Partially -- loop is fixed, not model-driven |
+| Symbolic filtering | `_velocity_filter()`, `_amount_anomaly_filter()`, `_geo_filter()`, `_device_shift_filter()` | Yes -- code processes data, not the LLM |
+| llm_query sub-calls | `_llm_query()` -- per-user sub-call with context folding | Yes -- targeted sub-calls on filtered data |
+| Context folding | Each sub-call gets only 1 user's flagged + baseline txns | Yes -- fresh context per sub-call |
+| Model as controller | **Not implemented** -- Python code is the controller | No -- this is the key divergence |
+| Diffusion answer | `answer["ready"]` set only after all sub-calls merge | Partially -- no iterative refinement |
+| Fail Fast, Fail Loud | Exceptions propagate; no silent fallback to monolithic LLM | Yes |
+| Trajectory logging | `Trajectory` and `TrajectoryStep` dataclasses | Yes |
 
-The main departure: instead of the LLM generating arbitrary Python code
-at runtime (which proved unreliable in testing -- see below), the filters
-are **deterministic and pre-built**. The LLM is used exclusively for
-semantic judgment on pre-filtered data.
+### The Key Divergence: Who Controls the Loop
+
+In the paper, the LLM is the **controller**. It decides what code to
+generate, observes execution results, and chooses whether to recurse,
+refine, or finalize. The REPL is a tool the model uses autonomously.
+
+In this implementation, **Python code is the controller**. The pipeline
+is hardcoded: always 4 phases, always the same 4 filters with fixed
+thresholds, always one LLM call per flagged user. The LLM has no ability
+to change the pipeline, add filters, adjust thresholds, or decide to
+re-examine data.
+
+This makes the system a **code-controlled pipeline that borrows RLM
+principles** (context folding, symbolic filtering, sub-calls), not a true
+recursive model. A more precise label: **rule-gated LLM verifier** or
+**hybrid symbolic + LLM pipeline**.
 
 ### Why Pre-Built Filters Over LLM-Generated Code
 
-During development, raw LLM code generation was tested and failed:
+The paper's approach (LLM generates code at runtime) was tested and failed:
 
 - Generated `int + timedelta` (type error crash)
 - Wrong standard deviation logic
@@ -156,8 +169,22 @@ During development, raw LLM code generation was tested and failed:
 - Safety-refused on `llm_query` calls ("I don't have access to personal data")
 
 Pre-built deterministic filters produce the same correct result every run.
-The LLM's strength -- semantic judgment -- is used where it excels, not
-where code is more reliable.
+This is a pragmatic engineering decision: sacrifice model autonomy for
+reliability. The LLM's strength -- semantic judgment -- is used where it
+excels, not where code is more reliable.
+
+### What Would Make This a True RLM
+
+To evolve this into a genuine recursive model, the LLM would need to:
+- Decide which filters to apply (not hardcoded)
+- Choose thresholds based on data distribution
+- Decide whether results need re-examination
+- Generate and execute new analysis code based on findings
+- Control branching and recursion depth
+
+That would require a robust code sandbox, error recovery loop, and
+significantly more trust in LLM-generated code -- a direction the paper
+explores but this implementation deliberately avoids for reliability.
 
 ---
 

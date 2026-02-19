@@ -1,15 +1,22 @@
-# RLM Fraud Detection
+# RLM-Inspired Fraud Detection
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![Tests](https://img.shields.io/badge/tests-47%20passing-brightgreen.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-**98.4% fewer tokens. 100% accuracy. $1.98M/year savings at 10M txns/day.**
+**98.4% fewer tokens. 100% accuracy on synthetic benchmarks. $1.98M/year savings at 10M txns/day.**
 
-A working implementation of the Recursive Language Model (RLM) paradigm
-applied to financial fraud detection. Demonstrates how deterministic
-code-based filtering combined with targeted LLM verification can replace
-brute-force context stuffing -- cutting costs by 97% while improving accuracy.
+An **RLM-inspired orchestration pipeline** for financial fraud detection.
+Applies principles from the Recursive Language Model paradigm
+([arXiv:2512.24601](https://arxiv.org/abs/2512.24601)) -- context folding,
+symbolic filtering, targeted sub-calls -- to demonstrate how deterministic
+code-based filtering combined with LLM verification can replace brute-force
+context stuffing, cutting costs by 97% while improving accuracy.
+
+> **Not a true RLM.** The LLM does not control the reasoning loop. All
+> orchestration is hardcoded Python. This is a rule-gated LLM verifier
+> that borrows RLM principles, not a recursive model.
+> [See the full distinction.](https://abivarma.github.io/rlm-fraud-detection-course/architecture#how-this-differs-from-true-rlm-and-tool-calling)
 
 > [Documentation Site](https://abivarma.github.io/rlm-fraud-detection-course/) |
 > Built by [Abivarma](https://github.com/Abivarma) | February 2026
@@ -25,10 +32,10 @@ historical cases to the model in a single prompt. At enterprise scale:
 - Context windows fill up, causing **attention dilution** (context rot)
 - No audit trail -- decisions are opaque to compliance teams
 
-## The Solution: RLM REPL Loop
+## The Solution: Filter-Then-Verify Pipeline
 
-Instead of stuffing everything into one prompt, RLM uses a 4-phase pipeline
-where **3 out of 4 phases use zero LLM tokens**:
+Instead of stuffing everything into one prompt, this approach uses a 4-phase
+pipeline where **3 out of 4 phases use zero LLM tokens**:
 
 ```
 Input (N transactions)
@@ -51,7 +58,7 @@ with fresh per-user context instead of a monolithic prompt.
 
 ## Results
 
-Tested across 8 fraud scenarios (51 transactions) with live API calls (gpt-4o-mini):
+Tested across 8 **synthetic** fraud scenarios (51 transactions) with live API calls (gpt-4o-mini).
 
 | Metric | Naive | RLM | Improvement |
 |--------|-------|-----|-------------|
@@ -72,6 +79,15 @@ Tested across 8 fraud scenarios (51 transactions) with live API calls (gpt-4o-mi
 | 10M txns | $2,041,531 | $59,924 | **$1,981,606** |
 
 Based on gpt-4o-mini pricing ($0.15/1M input, $0.60/1M output tokens).
+
+## Limitations
+
+- **Synthetic data only**: 51 hand-crafted transactions with clear patterns. Real-world fraud is subtler. The 100% accuracy validates the architecture, not real-world performance.
+- **Hardcoded filters**: Fixed thresholds (300s velocity window, z > 3.0, etc.) tuned for demo scenarios. Production requires threshold tuning on real data.
+- **Not a true RLM**: The LLM does not control the loop. All orchestration is deterministic Python. This is a code-controlled pipeline borrowing RLM principles.
+- **No drift handling**: No retraining pipeline, no threshold adaptation, no feedback loop.
+
+See [Enterprise FAQ](https://abivarma.github.io/rlm-fraud-detection-course/faq) for detailed discussion.
 
 ## Quick Start
 
@@ -99,7 +115,7 @@ jupyter notebook notebooks/05_rlm_benefits_demo.ipynb
 ```
 .
 ├── src/agents/
-│   ├── rlm_repl_agent.py          # Core: 4-phase RLM REPL implementation
+│   ├── rlm_repl_agent.py          # Core: 4-phase pipeline (RLM-inspired)
 │   ├── naive_agent.py             # Baseline: 500 cases + all txns -> LLM
 │   ├── rag_agent.py               # RAG: vector retrieval + LLM
 │   └── rlm_agent.py               # Old one-shot RLM (kept for comparison)
@@ -141,7 +157,7 @@ jupyter notebook notebooks/05_rlm_benefits_demo.ipynb
 
 | File | What It Does |
 |------|-------------|
-| [`src/agents/rlm_repl_agent.py`](src/agents/rlm_repl_agent.py) | Core RLM: deterministic filters + LLM sub-calls + trajectory logging |
+| [`src/agents/rlm_repl_agent.py`](src/agents/rlm_repl_agent.py) | Core pipeline: hardcoded filters + LLM sub-calls + trajectory logging |
 | [`notebooks/05_rlm_benefits_demo.ipynb`](notebooks/05_rlm_benefits_demo.ipynb) | Interactive results notebook (runs from cached data) |
 | [`notebooks/rlm_demo_cache.json`](notebooks/rlm_demo_cache.json) | Cached results: every token count, cost, and trajectory |
 | [`research_analysis.md`](research_analysis.md) | Detailed analysis of the RLM research paper |
