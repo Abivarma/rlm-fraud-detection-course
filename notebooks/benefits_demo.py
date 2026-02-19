@@ -1,10 +1,10 @@
-"""RLM Benefits Demonstration: 8 Examples with Clear Diffs
+"""Pipeline Benefits Demonstration: 8 Examples with Clear Diffs
 
-Runs all 3 approaches (Naive, RAG, RLM) on 8 carefully crafted fraud scenarios.
-Shows the chain-of-thought trajectory for RLM and clear cost/accuracy diffs.
+Runs Naive and Pipeline approaches on 8 carefully crafted fraud scenarios.
+Shows the chain-of-thought trajectory for the pipeline and clear cost/accuracy diffs.
 
 Usage:
-    python notebooks/rlm_benefits_demo.py [--scenario N] [--skip-rag] [--cached]
+    python notebooks/benefits_demo.py [--scenario N] [--skip-rag] [--cached]
 
 Options:
     --scenario N    Run only scenario N (1-8)
@@ -38,17 +38,17 @@ def _load_module(name, filepath):
 _project_root = str(Path(__file__).parent.parent)
 _metrics_mod = _load_module('src.metrics.tracker', os.path.join(_project_root, 'src', 'metrics', 'tracker.py'))
 _naive_mod = _load_module('src.agents.naive_agent_direct', os.path.join(_project_root, 'src', 'agents', 'naive_agent.py'))
-_rlm_mod = _load_module('src.agents.rlm_repl_agent_direct', os.path.join(_project_root, 'src', 'agents', 'rlm_repl_agent.py'))
+_pipeline_mod = _load_module('src.agents.pipeline_agent_direct', os.path.join(_project_root, 'src', 'agents', 'pipeline_agent.py'))
 
 NaiveFraudAgent = _naive_mod.NaiveFraudAgent
-RLMREPLAgent = _rlm_mod.RLMREPLAgent
+PipelineAgent = _pipeline_mod.PipelineAgent
 
 
 def load_scenarios():
     """Load demo scenarios from generated data."""
     data_dir = Path(__file__).parent.parent / 'data'
-    df = pd.read_csv(data_dir / 'rlm_demo_examples.csv')
-    with open(data_dir / 'rlm_demo_scenarios.json') as f:
+    df = pd.read_csv(data_dir / 'demo_examples.csv')
+    with open(data_dir / 'demo_scenarios.json') as f:
         scenarios_meta = json.load(f)
     return df, scenarios_meta
 
@@ -77,7 +77,9 @@ def print_scenario_header(scenario_meta, scenario_df):
     print(f"EXAMPLE {s['id']}/8: {s['name']}")
     print(f"{'='*70}")
     print(f"\n{s['description']}")
-    print(f"Why RLM wins: {s['why_rlm_wins']}")
+    # Support both old and new key names for backwards compatibility
+    why_wins = s.get('why_pipeline_wins', s.get('why_rlm_wins', ''))
+    print(f"Why pipeline wins: {why_wins}")
     print(f"\nInput: {s['num_transactions']} transactions, {s['num_fraud']} fraud")
     print(f"{'─'*70}")
 
@@ -93,7 +95,7 @@ def print_scenario_header(scenario_meta, scenario_df):
 def run_naive(scenario_df, retry_delay=20):
     """Run Naive approach on a scenario."""
     print(f"{'─'*70}")
-    print(f"NAIVE (500 historical cases + all txns → single LLM call)")
+    print(f"NAIVE (500 historical cases + all txns -> single LLM call)")
     print(f"{'─'*70}")
 
     agent = NaiveFraudAgent(model="gpt-4o-mini", temperature=0.1)
@@ -130,13 +132,13 @@ def run_naive(scenario_df, retry_delay=20):
     }
 
 
-def run_rlm(scenario_df, retry_delay=20):
-    """Run RLM REPL approach on a scenario."""
+def run_pipeline(scenario_df, retry_delay=20):
+    """Run pipeline approach on a scenario."""
     print(f"\n{'─'*70}")
-    print(f"RLM (Code filters → LLM sub-calls on filtered subset only)")
+    print(f"PIPELINE (Code filters -> LLM sub-calls on filtered subset only)")
     print(f"{'─'*70}")
 
-    agent = RLMREPLAgent(model="gpt-4o-mini", temperature=0.0)
+    agent = PipelineAgent(model="gpt-4o-mini", temperature=0.0)
 
     start = time.time()
     predictions, metrics = agent.analyze(scenario_df, retry_delay=retry_delay)
@@ -174,20 +176,20 @@ def run_rlm(scenario_df, retry_delay=20):
     }
 
 
-def print_diff(naive_result, rlm_result, scenario_meta):
+def print_diff(naive_result, pipeline_result, scenario_meta):
     """Print clear diff comparison."""
     print(f"\n{'─'*70}")
-    print(f"DIFF — {scenario_meta['name']}")
+    print(f"DIFF -- {scenario_meta['name']}")
     print(f"{'─'*70}")
 
     n = naive_result
-    r = rlm_result
+    r = pipeline_result
 
     token_savings = (1 - r['tokens'] / n['tokens']) * 100 if n['tokens'] > 0 else 0
     cost_savings = (1 - r['cost'] / n['cost']) * 100 if n['cost'] > 0 else 0
     filter_pct = (1 - r.get('filtered_count', r['tokens']) / r.get('total_count', r['tokens'])) * 100
 
-    print(f"  {'Metric':<15} {'Naive':>12} {'RLM':>12} {'RLM Savings':>15}")
+    print(f"  {'Metric':<15} {'Naive':>12} {'Pipeline':>12} {'Savings':>15}")
     print(f"  {'─'*54}")
     print(f"  {'Tokens':<15} {n['tokens']:>12,} {r['tokens']:>12,} {token_savings:>14.1f}%")
     print(f"  {'Cost':<15} ${n['cost']:>11.6f} ${r['cost']:>11.6f} {cost_savings:>14.1f}%")
@@ -202,40 +204,40 @@ def print_diff(naive_result, rlm_result, scenario_meta):
 
 def generate_report(all_results, scenarios_meta):
     """Generate markdown report."""
-    report_path = Path(__file__).parent / 'RLM_BENEFITS_REPORT.md'
+    report_path = Path(__file__).parent / 'BENEFITS_REPORT.md'
 
     lines = []
-    lines.append("# RLM Benefits Report: 8 Examples with Clear Diffs\n")
+    lines.append("# Pipeline Benefits Report: 8 Examples with Clear Diffs\n")
     lines.append(f"**Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
     lines.append("---\n")
 
     # Executive summary
     total_naive_tokens = sum(r['naive']['tokens'] for r in all_results.values() if 'naive' in r)
-    total_rlm_tokens = sum(r['rlm']['tokens'] for r in all_results.values() if 'rlm' in r)
+    total_pipeline_tokens = sum(r['pipeline']['tokens'] for r in all_results.values() if 'pipeline' in r)
     total_naive_cost = sum(r['naive']['cost'] for r in all_results.values() if 'naive' in r)
-    total_rlm_cost = sum(r['rlm']['cost'] for r in all_results.values() if 'rlm' in r)
+    total_pipeline_cost = sum(r['pipeline']['cost'] for r in all_results.values() if 'pipeline' in r)
 
-    token_savings = (1 - total_rlm_tokens / total_naive_tokens) * 100 if total_naive_tokens else 0
-    cost_savings = (1 - total_rlm_cost / total_naive_cost) * 100 if total_naive_cost else 0
+    token_savings = (1 - total_pipeline_tokens / total_naive_tokens) * 100 if total_naive_tokens else 0
+    cost_savings = (1 - total_pipeline_cost / total_naive_cost) * 100 if total_naive_cost else 0
 
     lines.append("## Executive Summary\n")
-    lines.append(f"| Metric | Naive (Total) | RLM (Total) | Savings |")
-    lines.append(f"|--------|---------------|-------------|---------|")
-    lines.append(f"| Tokens | {total_naive_tokens:,} | {total_rlm_tokens:,} | {token_savings:.1f}% |")
-    lines.append(f"| Cost | ${total_naive_cost:.6f} | ${total_rlm_cost:.6f} | {cost_savings:.1f}% |")
+    lines.append(f"| Metric | Naive (Total) | Pipeline (Total) | Savings |")
+    lines.append(f"|--------|---------------|-----------------|---------|")
+    lines.append(f"| Tokens | {total_naive_tokens:,} | {total_pipeline_tokens:,} | {token_savings:.1f}% |")
+    lines.append(f"| Cost | ${total_naive_cost:.6f} | ${total_pipeline_cost:.6f} | {cost_savings:.1f}% |")
     lines.append("")
 
     # Cost projections
     lines.append("### Cost Projections at Scale\n")
-    lines.append("| Scale | Naive/year | RLM/year | Annual Savings |")
-    lines.append("|-------|-----------|---------|----------------|")
-    if total_naive_cost > 0 and total_rlm_cost > 0:
-        naive_per_txn = total_naive_cost / sum(r['rlm'].get('total_count', 5) for r in all_results.values() if 'rlm' in r)
-        rlm_per_txn = total_rlm_cost / sum(r['rlm'].get('total_count', 5) for r in all_results.values() if 'rlm' in r)
+    lines.append("| Scale | Naive/year | Pipeline/year | Annual Savings |")
+    lines.append("|-------|-----------|--------------|----------------|")
+    if total_naive_cost > 0 and total_pipeline_cost > 0:
+        naive_per_txn = total_naive_cost / sum(r['pipeline'].get('total_count', 5) for r in all_results.values() if 'pipeline' in r)
+        pipeline_per_txn = total_pipeline_cost / sum(r['pipeline'].get('total_count', 5) for r in all_results.values() if 'pipeline' in r)
         for label, daily_txns in [("10K txns/day", 10000), ("100K txns/day", 100000), ("10M txns/day", 10000000)]:
             naive_year = naive_per_txn * daily_txns * 365
-            rlm_year = rlm_per_txn * daily_txns * 365
-            lines.append(f"| {label} | ${naive_year:,.0f} | ${rlm_year:,.0f} | ${naive_year - rlm_year:,.0f} |")
+            pipeline_year = pipeline_per_txn * daily_txns * 365
+            lines.append(f"| {label} | ${naive_year:,.0f} | ${pipeline_year:,.0f} | ${naive_year - pipeline_year:,.0f} |")
     lines.append("")
 
     # Per-scenario details
@@ -246,15 +248,16 @@ def generate_report(all_results, scenarios_meta):
         meta = next(s for s in scenarios_meta if s['id'] == sid)
         lines.append(f"### Example {sid}: {meta['name']}\n")
         lines.append(f"**{meta['description']}**\n")
-        lines.append(f"*Why RLM wins*: {meta['why_rlm_wins']}\n")
+        why_wins = meta.get('why_pipeline_wins', meta.get('why_rlm_wins', ''))
+        lines.append(f"*Why pipeline wins*: {why_wins}\n")
 
-        if 'naive' in results and 'rlm' in results:
-            n, r = results['naive'], results['rlm']
+        if 'naive' in results and 'pipeline' in results:
+            n, r = results['naive'], results['pipeline']
             token_sav = (1 - r['tokens'] / n['tokens']) * 100 if n['tokens'] else 0
             cost_sav = (1 - r['cost'] / n['cost']) * 100 if n['cost'] else 0
 
-            lines.append(f"| Metric | Naive | RLM | Savings |")
-            lines.append(f"|--------|-------|-----|---------|")
+            lines.append(f"| Metric | Naive | Pipeline | Savings |")
+            lines.append(f"|--------|-------|----------|---------|")
             lines.append(f"| Tokens | {n['tokens']:,} | {r['tokens']:,} | {token_sav:.0f}% |")
             lines.append(f"| Cost | ${n['cost']:.6f} | ${r['cost']:.6f} | {cost_sav:.0f}% |")
             lines.append(f"| Accuracy | {n['accuracy']['accuracy']*100:.0f}% | {r['accuracy']['accuracy']*100:.0f}% | |")
@@ -263,13 +266,13 @@ def generate_report(all_results, scenarios_meta):
             lines.append(f"| F1 | {n['accuracy']['f1']:.3f} | {r['accuracy']['f1']:.3f} | |")
             lines.append("")
 
-        # RLM trajectory
-        if 'rlm' in results and results['rlm'].get('trajectory'):
-            traj = results['rlm']['trajectory']
-            lines.append("**RLM Chain of Thought:**\n")
+        # Pipeline trajectory
+        if 'pipeline' in results and results['pipeline'].get('trajectory'):
+            traj = results['pipeline']['trajectory']
+            lines.append("**Pipeline Chain of Thought:**\n")
             lines.append("```")
             for step in traj['steps']:
-                lines.append(f"Phase: {step['phase']} — {step['description']}")
+                lines.append(f"Phase: {step['phase']} -- {step['description']}")
                 lines.append(f"  Code: {step['code']}")
                 lines.append(f"  Output: {step['output'][:300]}")
                 if step['tokens'] > 0:
@@ -281,9 +284,9 @@ def generate_report(all_results, scenarios_meta):
     lines.append("---\n")
     lines.append("## CTO Talking Points\n")
     lines.append(f"1. **Cost**: {cost_savings:.0f}% reduction across all 8 scenarios")
-    lines.append(f"2. **Accuracy**: RLM matches or exceeds Naive accuracy with fewer false positives")
-    lines.append(f"3. **Auditability**: Every RLM decision has an executable code trace (compliance-ready)")
-    lines.append(f"4. **Scale**: RLM handles 10M+ tokens via filtering, not context window expansion")
+    lines.append(f"2. **Accuracy**: Pipeline matches or exceeds Naive accuracy with fewer false positives")
+    lines.append(f"3. **Auditability**: Every pipeline decision has an executable code trace (compliance-ready)")
+    lines.append(f"4. **Scale**: Pipeline handles 10M+ tokens via filtering, not context window expansion")
     lines.append(f"5. **Context Rot Immunity**: Per-user sub-calls prevent attention dilution")
 
     report_text = "\n".join(lines)
@@ -293,8 +296,21 @@ def generate_report(all_results, scenarios_meta):
     return report_path
 
 
+def _normalize_results(all_results):
+    """Normalize old cache format ('rlm' key) to new format ('pipeline' key)."""
+    normalized = {}
+    for sid, results in all_results.items():
+        normalized[sid] = {}
+        for key, val in results.items():
+            if key == 'rlm':
+                normalized[sid]['pipeline'] = val
+            else:
+                normalized[sid][key] = val
+    return normalized
+
+
 def main():
-    parser = argparse.ArgumentParser(description="RLM Benefits Demo")
+    parser = argparse.ArgumentParser(description="Pipeline Benefits Demo")
     parser.add_argument('--scenario', type=int, help='Run only scenario N (1-8)')
     parser.add_argument('--skip-rag', action='store_true', help='Skip RAG (saves time)')
     parser.add_argument('--cached', action='store_true', help='Load cached results')
@@ -302,8 +318,8 @@ def main():
     args = parser.parse_args()
 
     print("=" * 70)
-    print("RLM BENEFITS DEMONSTRATION")
-    print("Naive vs RAG vs RLM — 8 Fraud Detection Scenarios")
+    print("PIPELINE BENEFITS DEMONSTRATION")
+    print("Naive vs Pipeline -- 8 Fraud Detection Scenarios")
     print("=" * 70)
 
     df, scenarios_meta = load_scenarios()
@@ -314,11 +330,13 @@ def main():
     else:
         scenarios_to_run = scenarios_meta
 
-    cache_path = Path(__file__).parent / 'rlm_demo_cache.json'
+    cache_path = Path(__file__).parent / 'demo_cache.json'
 
     if args.cached and cache_path.exists():
         with open(cache_path) as f:
             all_results = {int(k): v for k, v in json.load(f).items()}
+        # Normalize old cache format if needed
+        all_results = _normalize_results(all_results)
         print(f"\nLoaded cached results from {cache_path}")
     else:
         all_results = {}
@@ -332,13 +350,13 @@ def main():
         if sid not in all_results or not args.cached:
             all_results[sid] = {}
 
-            # Run RLM first (cheaper, validates data)
+            # Run Pipeline first (cheaper, validates data)
             try:
-                rlm_result = run_rlm(scenario_df, retry_delay=args.delay)
-                all_results[sid]['rlm'] = rlm_result
+                pipeline_result = run_pipeline(scenario_df, retry_delay=args.delay)
+                all_results[sid]['pipeline'] = pipeline_result
             except Exception as e:
-                print(f"  RLM ERROR: {e}")
-                all_results[sid]['rlm'] = {'tokens': 0, 'cost': 0, 'time': 0,
+                print(f"  PIPELINE ERROR: {e}")
+                all_results[sid]['pipeline'] = {'tokens': 0, 'cost': 0, 'time': 0,
                                            'accuracy': {'accuracy': 0, 'precision': 0, 'recall': 0, 'f1': 0},
                                            'predictions': []}
 
@@ -355,8 +373,8 @@ def main():
                                               'predictions': []}
 
             # Print diff
-            if 'naive' in all_results[sid] and 'rlm' in all_results[sid]:
-                print_diff(all_results[sid]['naive'], all_results[sid]['rlm'], scenario)
+            if 'naive' in all_results[sid] and 'pipeline' in all_results[sid]:
+                print_diff(all_results[sid]['naive'], all_results[sid]['pipeline'], scenario)
 
             # Save intermediate cache
             with open(cache_path, 'w') as f:
@@ -367,15 +385,15 @@ def main():
                 print(f"\n  Waiting {args.delay}s for rate limits...")
                 time.sleep(args.delay)
 
-    # ── AGGREGATE SUMMARY ──────────────────────────────────────
+    # -- AGGREGATE SUMMARY --
     print(f"\n{'='*70}")
-    print("AGGREGATE SUMMARY — ALL SCENARIOS")
+    print("AGGREGATE SUMMARY -- ALL SCENARIOS")
     print(f"{'='*70}")
 
     total_naive = {'tokens': 0, 'cost': 0.0}
-    total_rlm = {'tokens': 0, 'cost': 0.0}
+    total_pipeline = {'tokens': 0, 'cost': 0.0}
     naive_correct = 0
-    rlm_correct = 0
+    pipeline_correct = 0
     total_txns = 0
 
     for sid, results in sorted(all_results.items()):
@@ -383,31 +401,31 @@ def main():
             total_naive['tokens'] += results['naive']['tokens']
             total_naive['cost'] += results['naive']['cost']
             naive_correct += results['naive']['accuracy']['tp'] + results['naive']['accuracy']['tn']
-        if 'rlm' in results:
-            total_rlm['tokens'] += results['rlm']['tokens']
-            total_rlm['cost'] += results['rlm']['cost']
-            rlm_correct += results['rlm']['accuracy']['tp'] + results['rlm']['accuracy']['tn']
+        if 'pipeline' in results:
+            total_pipeline['tokens'] += results['pipeline']['tokens']
+            total_pipeline['cost'] += results['pipeline']['cost']
+            pipeline_correct += results['pipeline']['accuracy']['tp'] + results['pipeline']['accuracy']['tn']
         meta = next(s for s in scenarios_meta if s['id'] == sid)
         total_txns += meta['num_transactions']
 
     if total_naive['tokens'] > 0:
-        print(f"\n  {'Metric':<15} {'Naive':>12} {'RLM':>12} {'Savings':>12}")
+        print(f"\n  {'Metric':<15} {'Naive':>12} {'Pipeline':>12} {'Savings':>12}")
         print(f"  {'─'*51}")
-        print(f"  {'Tokens':<15} {total_naive['tokens']:>12,} {total_rlm['tokens']:>12,} "
-              f"{(1-total_rlm['tokens']/total_naive['tokens'])*100:>11.1f}%")
-        print(f"  {'Cost':<15} ${total_naive['cost']:>11.6f} ${total_rlm['cost']:>11.6f} "
-              f"{(1-total_rlm['cost']/total_naive['cost'])*100:>11.1f}%")
+        print(f"  {'Tokens':<15} {total_naive['tokens']:>12,} {total_pipeline['tokens']:>12,} "
+              f"{(1-total_pipeline['tokens']/total_naive['tokens'])*100:>11.1f}%")
+        print(f"  {'Cost':<15} ${total_naive['cost']:>11.6f} ${total_pipeline['cost']:>11.6f} "
+              f"{(1-total_pipeline['cost']/total_naive['cost'])*100:>11.1f}%")
         print(f"  {'Accuracy':<15} {naive_correct/total_txns*100:>11.0f}% "
-              f"{rlm_correct/total_txns*100:>11.0f}%")
+              f"{pipeline_correct/total_txns*100:>11.0f}%")
 
         # Cost projections
         naive_per_txn = total_naive['cost'] / total_txns
-        rlm_per_txn = total_rlm['cost'] / total_txns
+        pipeline_per_txn = total_pipeline['cost'] / total_txns
         print(f"\n  Cost Projections:")
         for label, daily in [("10K/day", 10000), ("100K/day", 100000), ("10M/day", 10_000_000)]:
             n_year = naive_per_txn * daily * 365
-            r_year = rlm_per_txn * daily * 365
-            print(f"    {label}: Naive ${n_year:>10,.0f}/yr → RLM ${r_year:>10,.0f}/yr "
+            r_year = pipeline_per_txn * daily * 365
+            print(f"    {label}: Naive ${n_year:>10,.0f}/yr -> Pipeline ${r_year:>10,.0f}/yr "
                   f"(save ${n_year-r_year:>10,.0f})")
 
     # Generate report

@@ -1,13 +1,12 @@
-"""Proper RLM (Recursive Language Model) fraud detection agent.
+"""Filter-then-verify fraud detection pipeline agent.
 
-Implements the real RLM paradigm from arXiv:2512.24601:
-- Persistent REPL loop with 4 phases: PROBE → FILTER → ANALYZE → AGGREGATE
+4-phase pipeline: PROBE → FILTER → ANALYZE → AGGREGATE
 - Deterministic code-based filters (velocity, amount, geo, device shift)
-- LLM sub-calls (llm_query) only for semantic verification on filtered subsets
+- LLM sub-calls only for semantic verification on filtered subsets
 - Context folding: each sub-call gets only 1 user's data (no context rot)
 - Full trajectory logging for auditability
 
-This replaces the broken one-shot code-gen approach in rlm_agent.py.
+This replaces the broken one-shot code-gen approach in legacy_agent.py.
 """
 
 import os
@@ -28,7 +27,7 @@ load_dotenv()
 
 @dataclass
 class TrajectoryStep:
-    """One step in the RLM REPL trajectory."""
+    """One step in the pipeline trajectory."""
     phase: str          # PROBE, FILTER, ANALYZE, AGGREGATE
     description: str    # What this step does
     code: str           # The code/logic executed
@@ -40,7 +39,7 @@ class TrajectoryStep:
 
 @dataclass
 class Trajectory:
-    """Full RLM trajectory for one analysis run."""
+    """Full pipeline trajectory for one analysis run."""
     steps: List[TrajectoryStep] = field(default_factory=list)
     total_tokens: int = 0
     total_cost: float = 0.0
@@ -72,8 +71,8 @@ class Trajectory:
         }
 
 
-class RLMREPLAgent:
-    """RLM agent with iterative REPL loop for fraud detection.
+class PipelineAgent:
+    """Filter-then-verify pipeline agent for fraud detection.
 
     Architecture (per research_analysis.md):
         Phase 1 PROBE:     Code examines data structure (0 LLM tokens)
@@ -314,7 +313,7 @@ class RLMREPLAgent:
 
     def analyze(self, transactions: pd.DataFrame,
                 retry_delay: int = 20) -> Tuple[List[bool], AnalysisMetrics]:
-        """Analyze transactions using the RLM REPL loop.
+        """Analyze transactions using the filter-then-verify pipeline.
 
         Returns:
             Tuple of (predictions, metrics)
@@ -583,7 +582,7 @@ class RLMREPLAgent:
         total_latency_ms = (time.time() - start_time) * 1000
 
         metrics = AnalysisMetrics(
-            approach='rlm_repl',
+            approach='pipeline',
             total_tokens=trajectory.total_tokens,
             prompt_tokens=int(trajectory.total_tokens * 0.7),  # approximate split
             completion_tokens=int(trajectory.total_tokens * 0.3),

@@ -12,38 +12,23 @@ readiness, accuracy, technical limitations, and deployment considerations.
 
 ## Terminology and Scope
 
-### Q0a: Is this actually a Recursive Language Model?
+### Q1: What exactly is this system?
 
-No. This is an **RLM-inspired orchestration pipeline**, not a true
-Recursive Language Model.
+This is a **rule-gated LLM verifier** -- a linear Python pipeline where
+hardcoded deterministic filters process data first, and the LLM only
+verifies the flagged subset. The LLM has zero autonomy.
 
-In a true RLM (as described in [arXiv:2512.24601](https://arxiv.org/abs/2512.24601)),
-the LLM **controls the reasoning loop**: it generates code, executes it in
-a REPL, observes results, and decides what to do next. The model is both
-the reasoner and the controller.
+The 4-phase pipeline is fixed: PROBE, FILTER (4 specific filters with
+fixed thresholds), ANALYZE (LLM sub-call), AGGREGATE. The LLM is called
+at exactly one point with a fixed prompt template. It cannot change the
+pipeline, skip filters, adjust thresholds, or request additional analysis.
 
-In this implementation, **Python code controls everything**. The 4-phase
-pipeline is fixed. The filters are hardcoded with fixed thresholds. The
-LLM is called at exactly one point for semantic verification. The model
-has no ability to change the pipeline, add filters, adjust thresholds, or
-recurse.
+More accurate labels:
+- **Rule-gated LLM verifier**
+- **Hybrid symbolic + LLM pipeline**
+- **Filter-then-verify pipeline**
 
-What we borrow from RLM:
-- **Context folding**: Each LLM sub-call gets fresh, focused per-user context
-- **Symbolic filtering**: Code processes data before the LLM sees it
-- **Targeted sub-calls**: LLM only analyzes the flagged subset
-
-What differs:
-- **No model autonomy**: The LLM does not decide what to filter or when to recurse
-- **No code generation**: Filters are pre-built, not LLM-generated
-- **No iterative refinement**: The pipeline runs once, in a fixed order
-
-A more accurate label: **rule-gated LLM verifier** or **hybrid symbolic +
-LLM pipeline**. See
-[Architecture: How This Differs](architecture#how-this-differs-from-true-rlm-and-tool-calling)
-for the full comparison.
-
-### Q0b: How is this different from standard tool calling / function calling?
+### Q2: How is this different from standard tool calling / function calling?
 
 In tool calling (OpenAI function calling, LangChain agents, etc.), the
 **LLM decides** which tools to invoke and when. The model has agency --
@@ -68,7 +53,7 @@ The LLM's only role is semantic confirmation of pre-computed findings.
 Both approaches can achieve the cost savings from "filter before LLM."
 The difference is who makes the filtering decisions.
 
-### Q0c: If the filters are hardcoded, isn't this just a rule engine with an LLM step?
+### Q3: If the filters are hardcoded, isn't this just a rule engine with an LLM step?
 
 Essentially, yes -- and that is the point.
 
@@ -93,7 +78,7 @@ of this pattern quantitatively.
 
 ## Cost and Scalability
 
-### Q1: "98.4% token reduction" -- is this realistic at enterprise scale?
+### Q4: "98.4% token reduction" -- is this realistic at enterprise scale?
 
 Yes. The numbers are mathematically derived from observed per-transaction
 costs across 8 scenarios (51 transactions) with live gpt-4o-mini API calls.
@@ -101,19 +86,19 @@ costs across 8 scenarios (51 transactions) with live gpt-4o-mini API calls.
 | Approach | Tokens (8 scenarios) | Cost | Per-Transaction |
 |----------|---------------------|------|-----------------|
 | Naive | 185,661 | $0.0285 | $0.000559 |
-| RLM | 3,059 | $0.0008 | $0.000016 |
+| Pipeline | 3,059 | $0.0008 | $0.000016 |
 
 The savings come from a structural change: Naive sends ~23,000 tokens per
-batch (500 historical cases + all transactions). RLM sends 300-700 tokens
-(only flagged subset after code filtering). This ratio holds regardless of
-scale because the filter logic is deterministic.
+batch (500 historical cases + all transactions). The pipeline sends 300-700
+tokens (only flagged subset after code filtering). This ratio holds
+regardless of scale because the filter logic is deterministic.
 
-At 10M transactions/day: Naive = $2,041,531/year, RLM = $59,924/year.
+At 10M transactions/day: Naive = $2,041,531/year, Pipeline = $59,924/year.
 
 **Caveat**: These are LLM API costs only. Production adds infrastructure
 costs (monitoring, compute, storage) of approximately $2,400-5,000/year.
 
-### Q2: What about infrastructure costs beyond API fees?
+### Q5: What about infrastructure costs beyond API fees?
 
 Production deployment adds:
 
@@ -125,15 +110,16 @@ Production deployment adds:
 | Logging and audit storage | $200-400 |
 | **Total infrastructure** | **$2,000-3,640** |
 
-Even with infrastructure, RLM at $60 + $3,640 = $3,700/year is dramatically
-cheaper than Naive at $2,041,531 + $3,640 = $2,045,171/year at 10M txns/day.
+Even with infrastructure, the pipeline at $60 + $3,640 = $3,700/year is
+dramatically cheaper than Naive at $2,041,531 + $3,640 = $2,045,171/year
+at 10M txns/day.
 
-### Q3: How does cost scale with transaction volume?
+### Q6: How does cost scale with transaction volume?
 
 Linearly. Each transaction batch is independent.
 
-| Daily Volume | Naive / Year | RLM / Year | Savings |
-|-------------|-------------|-----------|---------|
+| Daily Volume | Naive / Year | Pipeline / Year | Savings |
+|-------------|-------------|----------------|---------|
 | 1K | $204 | $6 | $198 |
 | 10K | $2,042 | $60 | $1,982 |
 | 100K | $20,415 | $599 | $19,816 |
@@ -147,10 +133,10 @@ would further reduce both approaches proportionally.
 
 ## Production Readiness
 
-### Q4: Is this production-ready as-is?
+### Q7: Is this production-ready as-is?
 
-No. This is a validated proof-of-concept that demonstrates the RLM paradigm.
-Production deployment requires:
+No. This is a validated proof-of-concept that demonstrates the filter-then-verify
+pattern. Production deployment requires:
 
 1. **Error handling**: Retry logic for API failures, circuit breakers
 2. **Rate limiting**: OpenAI rate limits require queuing at scale
@@ -163,29 +149,29 @@ Production deployment requires:
 The core architecture (deterministic filters + targeted LLM sub-calls) is
 production-proven at companies like Stripe and PayPal in similar forms.
 
-### Q5: What about latency? Can this work for real-time decisions?
+### Q8: What about latency? Can this work for real-time decisions?
 
-RLM latency per batch: 1.8-25 seconds (depending on number of sub-calls).
+Pipeline latency per batch: 1.8-25 seconds (depending on number of sub-calls).
 
-| Scenario | RLM Time | Naive Time | Sub-calls |
-|----------|---------|-----------|-----------|
+| Scenario | Pipeline Time | Naive Time | Sub-calls |
+|----------|--------------|-----------|-----------|
 | Single user (5 txns) | 1.8-3.2s | 2.9-5.1s | 1 |
 | Multi-user (15 txns) | 25.3s | 5.5s | 2 |
 | No fraud detected | 0.002s | 4.7s | 0 |
 
 For real-time (<100ms) decisions, use a hybrid approach:
 - Layer 1: ML model for instant scoring (<10ms)
-- Layer 2: RLM for async review of medium-confidence cases (seconds)
+- Layer 2: Pipeline for async review of medium-confidence cases (seconds)
 - Layer 3: Human review for edge cases
 
-RLM excels in **near-real-time** (seconds) and **batch** (hourly/daily)
-processing, not sub-second decisions.
+The pipeline excels in **near-real-time** (seconds) and **batch**
+(hourly/daily) processing, not sub-second decisions.
 
 ---
 
 ## Accuracy and Reliability
 
-### Q6: 100% accuracy sounds too good. What's the catch?
+### Q9: 100% accuracy sounds too good. What's the catch?
 
 It is too good -- for real-world claims. The 100% accuracy is on 8
 **synthetic scenarios** (51 transactions) with clear, unambiguous fraud
@@ -214,27 +200,27 @@ The pipeline achieved 100% vs Naive's 94% because:
 Real-world deployment would require validation on large labeled datasets
 with proper cross-validation, class imbalance handling, and threshold tuning.
 
-### Q7: What about the old RLM results showing F1=0.0?
+### Q10: What about the old evaluation showing F1=0.0?
 
 The older evaluation (Phase 1-4 comparison on 10,000 transactions) used a
-**broken RLM implementation** (`rlm_agent.py`) that:
+**broken implementation** (`legacy_agent.py`) that:
 
-- Generated code in a single shot (no iterative REPL)
+- Generated code in a single shot (no iterative loop)
 - Silently fell back to sending ALL transactions when code crashed
 - Resulted in `"filtered": 200/200` = zero actual filtering
 
-The new implementation (`rlm_repl_agent.py`) fixes this with:
+The new implementation (`pipeline_agent.py`) fixes this with:
 - Pre-built deterministic filters (no LLM code generation)
-- 4-phase REPL loop with trajectory logging
+- 4-phase pipeline with trajectory logging
 - Per-user context folding
 
-The F1=0.0 was a bug, not a fundamental limitation of the RLM paradigm.
+The F1=0.0 was a bug, not a fundamental limitation of the approach.
 
 ---
 
 ## Technical Limitations
 
-### Q8: You use synthetic data. Does this generalize to real fraud?
+### Q11: You use synthetic data. Does this generalize to real fraud?
 
 Synthetic data is a limitation for generalization claims. The 8 scenarios
 cover common fraud archetypes (velocity, geographic impossibility, amount
@@ -251,7 +237,7 @@ The **cost optimization principles** generalize regardless of data source:
 code filters are always cheaper than LLM token processing. The specific
 filter thresholds and patterns would need tuning for real data.
 
-### Q9: What if OpenAI changes pricing or deprecates the model?
+### Q12: What if OpenAI changes pricing or deprecates the model?
 
 Vendor lock-in is a real risk. Mitigation:
 
@@ -262,11 +248,11 @@ Vendor lock-in is a real risk. Mitigation:
 | Azure OpenAI | Low | Same API, enterprise SLA + compliance |
 | OpenAI Batch API | Low | 50% cost reduction, SLA guarantees |
 
-The RLM architecture is **model-agnostic**: the deterministic filters are
+The architecture is **model-agnostic**: the deterministic filters are
 pure Python, and the LLM sub-calls can target any provider. Only the
 `_llm_query()` method needs changing to switch providers.
 
-### Q10: What about embedding costs for the RAG approach?
+### Q13: What about embedding costs for the RAG approach?
 
 Embedding costs are negligible:
 
@@ -284,26 +270,26 @@ covers 500 cases) adds minimal cost.
 
 ## Comparison with Alternatives
 
-### Q11: Why not use a fine-tuned small model instead?
+### Q14: Why not use a fine-tuned small model instead?
 
 Fine-tuning is complementary, not competing:
 
 | Approach | Cost/Year (10K/day) | F1 (est.) | Setup |
 |----------|-------------------|-----------|-------|
-| RLM (base gpt-4o-mini) | $60 | 1.00* | 1 day |
+| Pipeline (base gpt-4o-mini) | $60 | 1.00* | 1 day |
 | Fine-tuned gpt-4o-mini | $180 | 0.80+ | 1 week |
 | Fine-tuned Llama 3.1 8B | $9 | 0.70+ | 2 weeks |
 
 *On synthetic scenarios. Real-world F1 would be lower without fine-tuning.
 
-The optimal production approach: **RLM filters + fine-tuned sub-model**.
-Use deterministic code filters for the cheap first pass, then a fine-tuned
-model for the semantic verification sub-calls.
+The optimal production approach: **deterministic filters + fine-tuned sub-model**.
+Use code filters for the cheap first pass, then a fine-tuned model for
+the semantic verification sub-calls.
 
-### Q12: How does this compare to traditional ML (Random Forest, XGBoost)?
+### Q15: How does this compare to traditional ML (Random Forest, XGBoost)?
 
-| Factor | XGBoost | LLM (RLM) |
-|--------|---------|-----------|
+| Factor | XGBoost | LLM (Pipeline) |
+|--------|---------|----|
 | Inference cost | ~$0 (CPU) | $60/year (API) |
 | Latency | <10ms | 1.8-25s |
 | F1 Score | 0.80-0.90 | Scenario-dependent |
@@ -314,14 +300,14 @@ model for the semantic verification sub-calls.
 LLMs win on: explainability, low-data regimes, unstructured text, rapid
 iteration. ML wins on: cost, latency, mature use cases.
 
-**Optimal**: Hybrid -- ML for fast scoring, RLM for edge case review and
-explainable audit trails.
+**Optimal**: Hybrid -- ML for fast scoring, pipeline for edge case review
+and explainable audit trails.
 
 ---
 
 ## Security and Compliance
 
-### Q13: Is sending transaction data to OpenAI a compliance risk?
+### Q16: Is sending transaction data to OpenAI a compliance risk?
 
 Yes, for regulated industries. Mitigation options:
 
@@ -334,11 +320,11 @@ Yes, for regulated industries. Mitigation options:
 **Recommended for financial services**: Azure OpenAI or self-hosted model.
 Standard OpenAI API requires PII masking before sending data.
 
-The RLM architecture helps compliance: the audit trail shows exactly which
-data was sent to the LLM and what it returned, satisfying explainability
-requirements.
+The pipeline architecture helps compliance: the audit trail shows exactly
+which data was sent to the LLM and what it returned, satisfying
+explainability requirements.
 
-### Q14: Can we trust LLM fraud decisions? What about hallucinations?
+### Q17: Can we trust LLM fraud decisions? What about hallucinations?
 
 In this implementation, the LLM is **not making autonomous decisions**.
 The deterministic code filters identify suspicious patterns using exact
@@ -359,7 +345,7 @@ human review for medium-confidence, auto-reject low-confidence.
 
 ## Real-World Deployment
 
-### Q15: Has anyone deployed this pattern in production?
+### Q18: Has anyone deployed this pattern in production?
 
 This specific implementation is a proof-of-concept. The underlying patterns
 are production-proven:
@@ -368,11 +354,7 @@ are production-proven:
 - **PayPal**: LLM for transaction explanation, reduced review time 40%
 - **Feedzai**: LLM + ML ensemble, 60% reduction in false positives
 
-The RLM paradigm itself (arXiv:2512.24601) has been validated on benchmarks
-up to 8.3M tokens (BrowseComp-Plus) with 91.33% accuracy. Implementations
-exist in DSPy, PrimeIntellect, and AWS Bedrock.
-
-### Q16: What is the ROI timeline?
+### Q19: What is the ROI timeline?
 
 Depends on what you are replacing:
 
@@ -384,8 +366,8 @@ Depends on what you are replacing:
 
 Implementation cost: approximately $30,000 (6 weeks engineering).
 
-RLM is most valuable when replacing expensive LLM approaches at scale
-or supplementing manual review with automated explainable decisions.
+The pipeline is most valuable when replacing expensive LLM approaches at
+scale or supplementing manual review with automated explainable decisions.
 
 ---
 

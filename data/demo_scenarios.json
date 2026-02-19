@@ -3,7 +3,7 @@
     "id": 1,
     "name": "Velocity Attack",
     "description": "5 transactions in 3 minutes from same user \u2014 card testing pattern",
-    "why_rlm_wins": "Code detects time_diff < 300s deterministically; Naive sends 22K tokens for same result",
+    "why_pipeline_wins": "Code detects time_diff < 300s deterministically; Naive sends 22K tokens for same result",
     "num_transactions": 5,
     "num_fraud": 5,
     "fraud_types": [
@@ -28,7 +28,7 @@
     "id": 2,
     "name": "Geographic Impossibility",
     "description": "User transacts in NYC, then Tokyo 10 minutes later \u2014 impossible travel",
-    "why_rlm_wins": "Code checks location+time pairs; RAG cannot do distance/time math",
+    "why_pipeline_wins": "Code checks location+time pairs; RAG cannot do distance/time math",
     "num_transactions": 4,
     "num_fraud": 2,
     "fraud_types": [
@@ -49,7 +49,7 @@
     "id": 3,
     "name": "Amount Spike",
     "description": "User averages $19 on groceries, suddenly spends $487 on jewelry from desktop",
-    "why_rlm_wins": "Code computes leave-one-out std dev (z=170); LLM confirms category shift",
+    "why_pipeline_wins": "Code computes leave-one-out std dev (z=170); LLM confirms category shift",
     "num_transactions": 5,
     "num_fraud": 1,
     "fraud_types": [
@@ -70,7 +70,7 @@
     "id": 4,
     "name": "Account Takeover",
     "description": "User profile shifts: mobile\u2192desktop, LA\u2192Chicago, grocery\u2192gift_cards, $20\u2192$250",
-    "why_rlm_wins": "Multi-filter cross-check: device_shift + amount catches subtle ATO pattern",
+    "why_pipeline_wins": "Multi-filter cross-check: device_shift + amount catches subtle ATO pattern",
     "num_transactions": 5,
     "num_fraud": 2,
     "fraud_types": [
@@ -92,7 +92,7 @@
     "id": 5,
     "name": "Micro-Transaction Testing",
     "description": "8 automated $1-2 transactions in 2 minutes \u2014 bot card testing pattern",
-    "why_rlm_wins": "Velocity filter catches count + timing; RAG finds no similar historical cases for $1 txns",
+    "why_pipeline_wins": "Velocity filter catches count + timing; RAG finds no similar historical cases for $1 txns",
     "num_transactions": 8,
     "num_fraud": 8,
     "fraud_types": [
@@ -123,7 +123,7 @@
     "id": 6,
     "name": "Legitimate High-Value",
     "description": "Consistent high-value user ($200-400 range) \u2014 should NOT be flagged",
-    "why_rlm_wins": "Filters correctly pass through (no anomaly); Naive may over-flag due to high amounts",
+    "why_pipeline_wins": "Filters correctly pass through (no anomaly); Naive may over-flag due to high amounts",
     "num_transactions": 4,
     "num_fraud": 0,
     "fraud_types": [],
@@ -139,7 +139,7 @@
     "id": 7,
     "name": "Mixed Batch",
     "description": "5 users, 15 transactions \u2014 2 users have fraud, 3 are legitimate",
-    "why_rlm_wins": "Per-user sub-calls analyze 5 users in parallel; Naive sends all 15 + 500 cases",
+    "why_pipeline_wins": "Per-user sub-calls analyze 5 users in parallel; Naive sends all 15 + 500 cases",
     "num_transactions": 15,
     "num_fraud": 4,
     "fraud_types": [
@@ -174,7 +174,7 @@
     "id": 8,
     "name": "Cross-Border Rapid",
     "description": "5 transactions across London\u2192Paris\u2192Tokyo\u2192Sydney in 30 minutes",
-    "why_rlm_wins": "Geo + velocity filters both trigger = high confidence; RAG misses temporal pattern",
+    "why_pipeline_wins": "Geo + velocity filters both trigger = high confidence; RAG misses temporal pattern",
     "num_transactions": 5,
     "num_fraud": 4,
     "fraud_types": [

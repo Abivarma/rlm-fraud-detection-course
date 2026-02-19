@@ -1,4 +1,4 @@
-"""Fraud detection agents: Naive, RAG, and RLM implementations."""
+"""Fraud detection agents: Naive, RAG, and Pipeline implementations."""
 
 from .naive_agent import NaiveFraudAgent
 from .rag_agent import RAGFraudAgent

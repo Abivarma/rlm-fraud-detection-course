@@ -1,8 +1,8 @@
 {
   "timestamp": "2026-02-18T00:57:30.051337",
   "test_size": 200,
-  "data_file": "rlm_test_transactions.csv",
-  "use_rlm": true,
+  "data_file": "test_transactions.csv",
+  "use_codegen": true,
   "results": {
     "naive": {
       "metrics": {
@@ -36,7 +36,7 @@
       "cost": 0.0033873,
       "tokens": 20413
     },
-    "rlm": {
+    "pipeline": {
       "metrics": {
         "accuracy": 0.935,
         "precision": 0.8235294117647058,

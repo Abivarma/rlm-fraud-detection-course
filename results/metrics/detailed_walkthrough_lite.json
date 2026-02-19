@@ -92,7 +92,7 @@
     "cost": null,
     "latency_ms": null
   },
-  "rlm": {
+  "pipeline": {
     "tokens": 346,
     "cost": 5.91e-05,
     "latency_ms": 1575.8399963378906,

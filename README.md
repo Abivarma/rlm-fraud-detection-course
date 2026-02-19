@@ -15,7 +15,7 @@ API costs by 97% while improving accuracy on synthetic benchmarks.
 > filters and targeted LLM verification calls. Not an AI agent, not a
 > recursive model, not tool calling. The LLM has zero autonomy -- it
 > only confirms what the code already flagged.
-> [See how it compares to other approaches.](https://abivarma.github.io/smart-llm-fraud-detection/architecture#how-this-differs-from-true-rlm-and-tool-calling)
+> [See how it compares to other approaches.](https://abivarma.github.io/smart-llm-fraud-detection/architecture#how-this-differs-from-other-approaches)
 
 > [Documentation Site](https://abivarma.github.io/smart-llm-fraud-detection/) |
 > Built by [Abivarma](https://github.com/Abivarma) | February 2026
@@ -59,8 +59,8 @@ with fresh per-user context instead of a monolithic prompt.
 
 Tested across 8 **synthetic** fraud scenarios (51 transactions) with live API calls (gpt-4o-mini).
 
-| Metric | Naive | RLM | Improvement |
-|--------|-------|-----|-------------|
+| Metric | Naive | Pipeline | Improvement |
+|--------|-------|----------|-------------|
 | Tokens (total) | 185,661 | 3,059 | **98.4% reduction** |
 | Cost (total) | $0.0285 | $0.0008 | **97.1% reduction** |
 | Accuracy | 94% (48/51) | **100%** (51/51) | +6 points |
@@ -70,8 +70,8 @@ Tested across 8 **synthetic** fraud scenarios (51 transactions) with live API ca
 
 ### Cost Projections at Scale
 
-| Daily Volume | Naive / Year | RLM / Year | Annual Savings |
-|-------------|-------------|-----------|----------------|
+| Daily Volume | Naive / Year | Pipeline / Year | Annual Savings |
+|-------------|-------------|----------------|----------------|
 | 10K txns | $2,042 | $60 | $1,982 |
 | 100K txns | $20,415 | $599 | $19,816 |
 | 1M txns | $204,153 | $5,992 | $198,161 |
@@ -83,7 +83,7 @@ Based on gpt-4o-mini pricing ($0.15/1M input, $0.60/1M output tokens).
 
 - **Synthetic data only**: 51 hand-crafted transactions with clear patterns. Real-world fraud is subtler. The 100% accuracy validates the architecture, not real-world performance.
 - **Hardcoded filters**: Fixed thresholds (300s velocity window, z > 3.0, etc.) tuned for demo scenarios. Production requires threshold tuning on real data.
-- **Not a true RLM**: The LLM does not control the loop. All orchestration is deterministic Python. This is a code-controlled pipeline borrowing RLM principles.
+- **Linear pipeline**: The LLM does not control the loop. All orchestration is deterministic Python. This is a code-controlled pipeline.
 - **No drift handling**: No retraining pipeline, no threshold adaptation, no feedback loop.
 
 See [Enterprise FAQ](https://abivarma.github.io/smart-llm-fraud-detection/faq) for detailed discussion.
@@ -100,13 +100,13 @@ pip install -r requirements.txt
 Run the demo (uses cached results, no API key needed):
 
 ```bash
-python notebooks/rlm_benefits_demo.py --cached
+python notebooks/benefits_demo.py --cached
 ```
 
 Or explore interactively:
 
 ```bash
-jupyter notebook notebooks/05_rlm_benefits_demo.ipynb
+jupyter notebook notebooks/05_benefits_demo.ipynb
 ```
 
 ## Project Structure
@@ -114,24 +114,24 @@ jupyter notebook notebooks/05_rlm_benefits_demo.ipynb
 ```
 .
 ├── src/agents/
-│   ├── rlm_repl_agent.py          # Core: 4-phase pipeline (RLM-inspired)
-│   ├── naive_agent.py             # Baseline: 500 cases + all txns -> LLM
-│   ├── rag_agent.py               # RAG: vector retrieval + LLM
-│   └── rlm_agent.py               # Old one-shot RLM (kept for comparison)
+│   ├── pipeline_agent.py            # Core: 4-phase filter-then-verify pipeline
+│   ├── naive_agent.py               # Baseline: 500 cases + all txns -> LLM
+│   ├── rag_agent.py                 # RAG: vector retrieval + LLM
+│   └── legacy_agent.py              # Old one-shot approach (kept for comparison)
 │
 ├── notebooks/
 │   ├── 00_problem_definition.ipynb     # Dataset creation and evaluation framework
 │   ├── 01_naive_approach.ipynb         # Phase 1: Baseline ($158/yr)
 │   ├── 02_rag_approach.ipynb           # Phase 2: RAG ($46/yr, 70.6% reduction)
-│   ├── 03_rlm_approach.ipynb           # Phase 3: RLM ($11/yr, 92.8% reduction)
+│   ├── 03_pipeline_approach.ipynb      # Phase 3: Pipeline ($11/yr, 92.8% reduction)
 │   ├── 04_comprehensive_comparison.ipynb  # Phase 4: All approaches compared
-│   ├── 05_rlm_benefits_demo.ipynb      # Final showcase: 8 scenarios with results
-│   ├── rlm_demo_cache.json             # Cached results from live API runs
-│   └── rlm_benefits_demo.py            # CLI demo runner
+│   ├── 05_benefits_demo.ipynb          # Final showcase: 8 scenarios with results
+│   ├── demo_cache.json                 # Cached results from live API runs
+│   └── benefits_demo.py               # CLI demo runner
 │
 ├── data/
-│   ├── rlm_demo_examples.csv           # 51 demo transactions (8 scenarios)
-│   └── rlm_demo_scenarios.json         # Scenario metadata
+│   ├── demo_examples.csv               # 51 demo transactions (8 scenarios)
+│   └── demo_scenarios.json             # Scenario metadata
 │
 ├── results/
 │   ├── visualizations/                 # 13 comparison charts (PNG)
@@ -146,20 +146,19 @@ jupyter notebook notebooks/05_rlm_benefits_demo.ipynb
 
 | Page | Description |
 |------|-------------|
-| [How It Works](https://abivarma.github.io/smart-llm-fraud-detection/how-it-works) | 4-phase REPL loop with real trajectory examples |
-| [Results](https://abivarma.github.io/smart-llm-fraud-detection/results) | All 8 scenarios with Naive vs RLM comparison |
-| [Research](https://abivarma.github.io/smart-llm-fraud-detection/research) | The RLM paradigm from arXiv:2512.24601 |
+| [How It Works](https://abivarma.github.io/smart-llm-fraud-detection/how-it-works) | 4-phase pipeline with real trajectory examples |
+| [Results](https://abivarma.github.io/smart-llm-fraud-detection/results) | All 8 scenarios with Naive vs Pipeline comparison |
+| [Research](https://abivarma.github.io/smart-llm-fraud-detection/research) | Context rot, attention dilution, and filter-then-verify principles |
 | [Architecture](https://abivarma.github.io/smart-llm-fraud-detection/architecture) | Technical deep dive into all three agents |
-| [Enterprise FAQ](https://abivarma.github.io/smart-llm-fraud-detection/faq) | 16 questions on costs, scaling, production readiness |
+| [Enterprise FAQ](https://abivarma.github.io/smart-llm-fraud-detection/faq) | 19 questions on costs, scaling, production readiness |
 
 ## Key Files
 
 | File | What It Does |
 |------|-------------|
-| [`src/agents/rlm_repl_agent.py`](src/agents/rlm_repl_agent.py) | Core pipeline: hardcoded filters + LLM sub-calls + trajectory logging |
-| [`notebooks/05_rlm_benefits_demo.ipynb`](notebooks/05_rlm_benefits_demo.ipynb) | Interactive results notebook (runs from cached data) |
-| [`notebooks/rlm_demo_cache.json`](notebooks/rlm_demo_cache.json) | Cached results: every token count, cost, and trajectory |
-| [`research_analysis.md`](research_analysis.md) | Detailed analysis of the RLM research paper |
+| [`src/agents/pipeline_agent.py`](src/agents/pipeline_agent.py) | Core pipeline: hardcoded filters + LLM sub-calls + trajectory logging |
+| [`notebooks/05_benefits_demo.ipynb`](notebooks/05_benefits_demo.ipynb) | Interactive results notebook (runs from cached data) |
+| [`notebooks/demo_cache.json`](notebooks/demo_cache.json) | Cached results: every token count, cost, and trajectory |
 
 ## Running Tests
 

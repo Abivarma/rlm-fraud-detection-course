@@ -35,7 +35,7 @@ env/
 
 # Large raw datasets (demo data is tracked)
 data/sample_transactions.csv
-data/rlm_test_transactions.csv
+data/test_transactions.csv
 
 # ChromaDB
 chroma_db/

@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 class AnalysisMetrics:
     """Metrics for a single fraud detection analysis."""
 
-    approach: str  # 'naive', 'rag', 'rlm'
+    approach: str  # 'naive', 'rag', 'pipeline'
     total_tokens: int
     prompt_tokens: int
     completion_tokens: int
@@ -20,8 +20,8 @@ class AnalysisMetrics:
     transactions_analyzed: int
     context_size_chars: Optional[int] = None
     retrieval_latency_ms: Optional[float] = None
-    filter_latency_ms: Optional[float] = None  # RLM: time to filter transactions
-    transactions_filtered: Optional[int] = None  # RLM: number of transactions after filtering
+    filter_latency_ms: Optional[float] = None  # Pipeline: time to filter transactions
+    transactions_filtered: Optional[int] = None  # Pipeline: number of transactions after filtering
     code_execution_count: Optional[int] = None
     llm_query_calls: Optional[int] = None
     timestamp: str = None
@@ -99,7 +99,7 @@ class MetricsTracker:
         self.metrics_history: Dict[str, List[AnalysisMetrics]] = {
             'naive': [],
             'rag': [],
-            'rlm': []
+            'pipeline': []
         }
 
     def record_analysis(self, metrics: AnalysisMetrics):
@@ -137,7 +137,7 @@ class MetricsTracker:
         """Save metrics for an approach to JSON file.
 
         Args:
-            approach: Approach name ('naive', 'rag', 'rlm')
+            approach: Approach name ('naive', 'rag', 'pipeline')
             filename: Optional custom filename
         """
         if filename is None:
@@ -235,7 +235,7 @@ class MetricsTracker:
         """
         comparison = {}
 
-        for approach in ['naive', 'rag', 'rlm']:
+        for approach in ['naive', 'rag', 'pipeline']:
             if self.metrics_history[approach]:
                 metrics_dicts = [m.to_dict() for m in self.metrics_history[approach]]
                 comparison[approach] = self._calculate_summary(metrics_dicts)

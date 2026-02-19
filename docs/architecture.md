@@ -8,7 +8,8 @@ title: Architecture
 This project implements three distinct approaches to LLM-based fraud
 detection, each progressively more efficient. This page covers their
 internal architecture, trade-offs, and an honest comparison of how this
-system relates to tool calling, true RLM, and standard LLM patterns.
+system relates to tool calling, agentic approaches, and standard LLM
+patterns.
 
 ---
 
@@ -85,11 +86,11 @@ For each transaction, return fraud/not-fraud.
 
 ---
 
-## Approach 3: RLM-Inspired Pipeline
+## Approach 3: Filter-Then-Verify Pipeline
 
-**File**: [`src/agents/rlm_repl_agent.py`](https://github.com/Abivarma/smart-llm-fraud-detection/blob/main/src/agents/rlm_repl_agent.py)
+**File**: [`src/agents/pipeline_agent.py`](https://github.com/Abivarma/smart-llm-fraud-detection/blob/main/src/agents/pipeline_agent.py)
 
-The RLM-inspired approach inverts the architecture: **hardcoded** code
+The pipeline approach inverts the architecture: **hardcoded** code
 filters process data first, the LLM only verifies flagged subsets. All
 orchestration is deterministic Python -- the LLM does not control the
 pipeline.
@@ -178,10 +179,9 @@ the relevant user's data -- no context rot.
 
 ---
 
-## How This Differs from True RLM and Tool Calling
+## How This Differs from Other Approaches
 
-This section addresses a fair criticism: this system is not a true Recursive
-Language Model. Here is an honest comparison of four approaches to
+This section provides an honest comparison of four approaches to
 LLM-based systems.
 
 ### The Four Approaches
@@ -205,7 +205,7 @@ LLM:  "Transaction is likely fraud because..."
 The LLM has **agency** -- it picks which tools to use and in what order.
 The code provides tools; the model provides strategy.
 
-**2. This Implementation (RLM-Inspired Pipeline)**
+**2. This Implementation (Filter-Then-Verify Pipeline)**
 
 Python code decides everything. The pipeline is **fixed and hardcoded**:
 always PROBE, then FILTER (4 specific filters with fixed thresholds), then
@@ -227,11 +227,11 @@ Code: aggregate(results)                             <- code decides
 The LLM has **no agency**. It is a verifier, not an orchestrator. The code
 provides both the tools AND the strategy.
 
-**3. True RLM (from the Paper)**
+**3. Model-Controlled Pipeline (Advanced)**
 
 The LLM operates inside a REPL environment. It generates code, executes it,
 observes results, and decides what to do next -- including writing new
-filters, adjusting parameters, or recursing with `llm_query` sub-calls.
+filters, adjusting parameters, or making recursive sub-calls.
 The model controls the loop.
 
 ```
@@ -241,7 +241,7 @@ REPL: {U001: 5 txns, U002: 3 txns}
 LLM:  "U001 has high volume. Let me check timing"
 LLM:  >>> df[df.user_id=='U001'].timestamp.diff()    <- LLM generates code
 REPL: [35s, 37s, 58s, 48s]
-LLM:  "Rapid succession. I'll use llm_query for deep analysis"
+LLM:  "Rapid succession. I'll do deeper analysis"
 LLM:  >>> llm_query("Analyze U001's 5 transactions")  <- LLM recurses
 Sub-LLM: "Velocity pattern indicates card testing"
 LLM:  >>> answer["fraudulent"] = ["TXN001", ...]     <- LLM finalizes
@@ -258,14 +258,14 @@ refinement.
 
 ### Comparison Table
 
-| Aspect | Tool Calling | This Project | True RLM | Agentic (ReAct) |
-|--------|-------------|-------------|----------|-----------------|
+| Aspect | Tool Calling | This Project | Model-Controlled | Agentic (ReAct) |
+|--------|-------------|-------------|-----------------|-----------------|
 | Who controls the loop | LLM | **Code** | LLM | LLM |
 | Who picks which tools | LLM | **Code** | LLM (writes code) | LLM |
 | LLM generates code | No | No | **Yes** | No |
 | Filter logic | Predefined tools | **Hardcoded filters** | LLM-generated | Predefined tools |
 | Thresholds | Fixed or tool params | **Fixed** | LLM-chosen | Fixed or tool params |
-| LLM can recurse | Via tool calls | **No** | Yes (llm_query) | Via tool calls |
+| LLM can recurse | Via tool calls | **No** | Yes | Via tool calls |
 | Deterministic | No (LLM chooses path) | **Yes** | No | No |
 | Reproducible | No | **Yes** | No | No |
 | LLM autonomy | Medium | **None** | Full | Medium |
@@ -278,33 +278,32 @@ The most accurate labels:
   confirms findings
 - **Hybrid symbolic + LLM pipeline**: Code handles computation, LLM
   handles semantic judgment
-- **RLM-inspired orchestration**: Borrows context folding, sub-calls,
-  and symbolic filtering from the RLM paradigm, but with hardcoded
-  control flow
+- **Filter-then-verify pipeline**: Cheap deterministic filtering before
+  expensive LLM invocation
 
 ### What This Demonstrates
 
-The value is not in the "recursive" label -- it is in the **architectural
-principle**: use cheap deterministic computation to reduce what the
-expensive LLM sees. This principle is valid regardless of who controls
-the loop:
+The value is not in any specific paradigm label -- it is in the
+**architectural principle**: use cheap deterministic computation to reduce
+what the expensive LLM sees. This principle is valid regardless of who
+controls the loop:
 
-- **98.4% token reduction** comes from code filters, not from recursion
+- **98.4% token reduction** comes from code filters, not from model autonomy
 - **100% accuracy** (on synthetic data) comes from focused context, not
-  from model self-direction
+  from self-directed reasoning
 - **$1.98M/year savings** comes from the filter-then-verify pattern, not
   from the LLM being a controller
 
 Whether you implement this as hardcoded filters (this project), tool
-calling, or a true RLM, the cost savings from "don't send everything to
-the LLM" remain.
+calling, or a model-controlled pipeline, the cost savings from "don't send
+everything to the LLM" remain.
 
 ---
 
 ## Comparison Summary
 
-| Aspect | Naive | RAG | RLM-Inspired |
-|--------|-------|-----|-------------|
+| Aspect | Naive | RAG | Pipeline |
+|--------|-------|-----|----------|
 | Prompt strategy | Everything in one shot | Retrieved subset + all txns | Hardcoded filters first, LLM on subset |
 | Token usage (8 scenarios) | 185,661 | ~50,000 (est.) | 3,059 |
 | LLM calls per batch | 1 monolithic | 1 monolithic | N per-user sub-calls |
@@ -317,12 +316,12 @@ the LLM" remain.
 
 ---
 
-## Historical Note: The Old RLM Agent
+## Historical Note: The Old Agent
 
-**File**: [`src/agents/rlm_agent.py`](https://github.com/Abivarma/smart-llm-fraud-detection/blob/main/src/agents/rlm_agent.py)
+**File**: [`src/agents/legacy_agent.py`](https://github.com/Abivarma/smart-llm-fraud-detection/blob/main/src/agents/legacy_agent.py)
 
-The original RLM implementation used `pydantic_ai_rlm` for one-shot code
-generation. In testing, this approach had critical failures:
+The original implementation used one-shot code generation. In testing,
+this approach had critical failures:
 
 - If the generated code crashed, it silently fell back to sending ALL
   transactions to the LLM (no filtering at all)
@@ -332,8 +331,8 @@ generation. In testing, this approach had critical failures:
   real filtering
 
 This file is kept in the repository for historical comparison. The current
-`rlm_repl_agent.py` implements the proper REPL paradigm with deterministic
-filters and targeted sub-calls.
+`pipeline_agent.py` implements the proper filter-then-verify pipeline with
+deterministic filters and targeted sub-calls.
 
 ---
 
@@ -346,7 +345,7 @@ All agents share a common metrics interface tracking:
 - Cost (computed from model-specific pricing)
 - Latency (wall-clock time per phase and total)
 - Accuracy metrics (TP, TN, FP, FN, precision, recall, F1)
-- Trajectory (for RLM: full phase-by-phase audit log)
+- Trajectory (for the pipeline: full phase-by-phase audit log)
 
 Results are stored in [`results/metrics/`](https://github.com/Abivarma/smart-llm-fraud-detection/tree/main/results/metrics)
 as JSON files, with visualizations in

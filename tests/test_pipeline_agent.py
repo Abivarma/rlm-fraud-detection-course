@@ -1,15 +1,15 @@
-"""Tests for RLM fraud detection agent."""
+"""Tests for legacy fraud detection agent."""
 
 import pytest
 import pandas as pd
 import time
-from src.agents.rlm_agent import RLMFraudAgent
+from src.agents.legacy_agent import LegacyFraudAgent
 
 
 @pytest.fixture
 def agent():
-    """Create RLM agent instance."""
-    return RLMFraudAgent(model="gpt-4o-mini", temperature=0.1)
+    """Create legacy agent instance."""
+    return LegacyFraudAgent(model="gpt-4o-mini", temperature=0.1)
 
 
 @pytest.fixture
@@ -33,7 +33,7 @@ def test_agent_initialization(agent):
     assert agent.client is not None
     assert len(agent.fraud_patterns) > 0
     assert len(agent.historical_cases) == 500
-    assert agent.rlm_agent is not None
+    assert agent.legacy_agent is not None
 
 
 def test_load_fraud_patterns(agent):
@@ -151,20 +151,20 @@ def test_analyze_empty_transactions(agent):
     """Test analyze raises error on empty input."""
     empty_df = pd.DataFrame()
     with pytest.raises(ValueError, match="Cannot analyze empty"):
-        agent.analyze(empty_df, use_rlm=False)
+        agent.analyze(empty_df, use_codegen=False)
 
 
 @pytest.mark.skip(reason="Requires OpenAI API call - run manually")
 def test_analyze_with_api(agent, sample_transactions):
     """Test full analysis pipeline (requires API)."""
-    predictions, metrics = agent.analyze(sample_transactions, use_rlm=False)
+    predictions, metrics = agent.analyze(sample_transactions, use_codegen=False)
 
     # Check predictions
     assert len(predictions) == len(sample_transactions)
     assert all(isinstance(p, bool) for p in predictions)
 
     # Check metrics
-    assert metrics.approach == 'rlm'
+    assert metrics.approach == 'legacy'
     assert metrics.total_tokens > 0
     assert metrics.cost_usd > 0
     assert metrics.latency_ms > 0

@@ -1,1 +1,1 @@
-"""Test suite for RLM Fraud Detection Course."""
+"""Test suite for Smart LLM Fraud Detection."""

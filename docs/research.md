@@ -3,11 +3,12 @@ layout: default
 title: Research
 ---
 
-# The RLM Paradigm and This Project
+# Research Background
 
-This page summarizes the Recursive Language Model (RLM) paradigm as
-described in [arXiv:2512.24601](https://arxiv.org/abs/2512.24601), explains
-what this project borrows from it, and is transparent about where it diverges.
+This page covers the core problems that motivate the filter-then-verify
+approach: context rot in monolithic prompts, the limitations of RAG for
+computational patterns, and the principle of symbolic pre-filtering before
+LLM invocation.
 
 ---
 
@@ -47,153 +48,87 @@ Generating a single filtering script and executing it is fragile:
 
 ---
 
-## The RLM Architecture
+## The Filter-Then-Verify Principle
 
-RLM redefines the relationship between the model and the prompt. Instead of
-ingesting the prompt, the model initializes a **persistent REPL environment**
-where the prompt is stored as a variable. The model interacts with data
-through **symbolic handles**, not attention over raw tokens.
+The core insight is simple: **use cheap deterministic computation to reduce
+what the expensive LLM sees**. This principle is valid regardless of
+implementation approach.
 
-### The REPL Interaction Loop
+### Symbolic Filtering Before LLM Invocation
 
-```
-Given prompt P:
-  1. Initialize state S_0, store P as variable in REPL
-  2. While not answer["ready"]:
-     a. Model generates code C_t based on history H_t
-     b. REPL executes C_t, produces output O_t
-     c. Metadata of O_t appended to H_{t+1}
-     d. Model observes results, generates next action
-  3. Return answer["content"]
-```
+Instead of sending all data to the LLM, code processes data first:
 
-The model acts as a **controller** for the REPL. Its context window contains
-only orchestration logic and result summaries -- not the raw data.
+1. **Deterministic filters** identify suspicious patterns using exact
+   computation (z-scores, time windows, location matching)
+2. **Only flagged data** reaches the LLM for semantic verification
+3. **Each LLM sub-call** gets fresh, focused context for one user
 
-### Symbolic Recursion: llm_query and llm_batch
-
-The "recursive" in RLM comes from two REPL-available functions:
-
-- **llm_query(prompt)**: Spawns a fresh sub-model instance with a clean
-  context to perform semantic analysis on a specific data slice.
-- **llm_batch(prompts)**: Fans out multiple sub-calls in parallel.
-
-This enables a pattern where the root model identifies 100 suspicious
-segments via code, then analyzes all 100 concurrently via `llm_batch` --
-each sub-call with its own clean context.
+This is the same pattern used at production scale by companies like Stripe
+(Radar), PayPal, and Feedzai -- rules and ML handle the bulk, expensive
+analysis handles the edge cases.
 
 ### Context Folding
 
-When a sub-call returns, only a **self-chosen summary** remains in the root
-model's context. This prevents "context saturation" where the reasoning
-trace itself causes the model to lose track of its goal.
+When the LLM is called, each sub-call receives only the relevant user's
+data. A batch of 15 transactions across 5 users becomes 2 sub-calls
+(for the 2 flagged users), each seeing only their own transactions with
+fresh context. This prevents attention dilution and cross-contamination.
 
-In fraud detection: the root orchestrator maintains a clear view of the
-global strategy while delegating per-user analysis to isolated sub-calls.
+### The Cost Equation
 
-### The Diffusion Answer Mechanism
+The savings come from a structural change:
 
-RLM uses an iterative answer refinement process:
-
-```python
-answer = {"content": "", "ready": False}
+```
+Naive:    All N transactions + 500 historical cases → LLM  (~23,000 tokens)
+Pipeline: Code filters → flagged subset only → LLM        (~300-700 tokens)
 ```
 
-Throughout multiple turns, the model edits, refines, and verifies the answer
-against raw data. Only when confident does it set `ready: True`. This
-enables a "fact-checking" loop before committing to results.
-
-### Error Recovery: Fail Fast, Fail Loud
-
-If a code snippet fails, the model observes the exception and generates
-an alternative approach. This iterative refinement handles format variations
-and edge cases that break one-shot code generation.
-
-In production, this means the system will not return "No Fraud Found"
-because a sub-call failed silently. It signals the failure explicitly.
+The ratio holds regardless of scale because the filter logic is
+deterministic and computationally free. At 10M transactions/day, this
+translates to $1.98M/year in API cost savings.
 
 ---
 
-## Benchmark Results from the Paper
+## Academic Context
 
-| Benchmark | Total Tokens | Base Model | RLM | RLM Cost |
-|-----------|-------------|-----------|-----|----------|
-| BrowseComp+ (1K) | 8.3M | Degraded | 91.33% accuracy | $0.99 avg |
-| CodeQA | 900K | 24.00 | 62.00 | $0.27 |
-| S-NIAH | Up to 2^18 | Fails > 2^14 | Consistent | Comparable |
-| OOLONG (Dense) | Dense | Low Recall | +10-59% Gain | Comparable |
+The idea of combining symbolic computation with LLM reasoning has been
+explored in several research directions:
 
-Key finding: RLMs can be **more cost-effective** than monolithic models.
-On BrowseComp+ (1K), ingesting 6-11M tokens costs $1.50-2.75, while the
-RLM averaged only $0.99 by filtering through the REPL.
+| Concept | Description | Relevance |
+|---------|-------------|-----------|
+| Context folding | Fresh per-sub-call context instead of monolithic prompts | Core technique used in this project |
+| Symbolic filtering | Code processes data before the LLM sees it | The 4 deterministic filters |
+| Targeted sub-calls | LLM only analyzes flagged subset | Per-user sub-calls in Phase 3 |
+| Hybrid symbolic + neural | Rules for cheap filtering, models for judgment | The architecture pattern |
 
----
-
-## How This Project Maps to the Paper
-
-| Paper Concept | This Implementation | Faithful? |
-|--------------|-------------------|-----------|
-| Persistent REPL | `RLMREPLAgent.analyze()` -- 4-phase loop with state | Partially -- loop is fixed, not model-driven |
-| Symbolic filtering | `_velocity_filter()`, `_amount_anomaly_filter()`, `_geo_filter()`, `_device_shift_filter()` | Yes -- code processes data, not the LLM |
-| llm_query sub-calls | `_llm_query()` -- per-user sub-call with context folding | Yes -- targeted sub-calls on filtered data |
-| Context folding | Each sub-call gets only 1 user's flagged + baseline txns | Yes -- fresh context per sub-call |
-| Model as controller | **Not implemented** -- Python code is the controller | No -- this is the key divergence |
-| Diffusion answer | `answer["ready"]` set only after all sub-calls merge | Partially -- no iterative refinement |
-| Fail Fast, Fail Loud | Exceptions propagate; no silent fallback to monolithic LLM | Yes |
-| Trajectory logging | `Trajectory` and `TrajectoryStep` dataclasses | Yes |
-
-### The Key Divergence: Who Controls the Loop
-
-In the paper, the LLM is the **controller**. It decides what code to
-generate, observes execution results, and chooses whether to recurse,
-refine, or finalize. The REPL is a tool the model uses autonomously.
-
-In this implementation, **Python code is the controller**. The pipeline
-is hardcoded: always 4 phases, always the same 4 filters with fixed
-thresholds, always one LLM call per flagged user. The LLM has no ability
-to change the pipeline, add filters, adjust thresholds, or decide to
-re-examine data.
-
-This makes the system a **code-controlled pipeline that borrows RLM
-principles** (context folding, symbolic filtering, sub-calls), not a true
-recursive model. A more precise label: **rule-gated LLM verifier** or
-**hybrid symbolic + LLM pipeline**.
-
-### Why Pre-Built Filters Over LLM-Generated Code
-
-The paper's approach (LLM generates code at runtime) was tested and failed:
-
-- Generated `int + timedelta` (type error crash)
-- Wrong standard deviation logic
-- Flagged ALL transactions as fraud
-- Safety-refused on `llm_query` calls ("I don't have access to personal data")
-
-Pre-built deterministic filters produce the same correct result every run.
-This is a pragmatic engineering decision: sacrifice model autonomy for
-reliability. The LLM's strength -- semantic judgment -- is used where it
-excels, not where code is more reliable.
-
-### What Would Make This a True RLM
-
-To evolve this into a genuine recursive model, the LLM would need to:
-- Decide which filters to apply (not hardcoded)
-- Choose thresholds based on data distribution
-- Decide whether results need re-examination
-- Generate and execute new analysis code based on findings
-- Control branching and recursion depth
-
-That would require a robust code sandbox, error recovery loop, and
-significantly more trust in LLM-generated code -- a direction the paper
-explores but this implementation deliberately avoids for reliability.
+Research on Recursive Language Models ([arXiv:2512.24601](https://arxiv.org/abs/2512.24601))
+explores a more advanced version of this principle where the LLM itself
+controls the reasoning loop, generates code, and decides when to recurse.
+This project does **not** implement that level of model autonomy -- the
+pipeline is a fixed, code-controlled sequence.
 
 ---
 
-## Open-Source RLM Implementations
+## What This Project Demonstrates
 
-| Project | Description | Reference For |
-|---------|-------------|--------------|
-| [alexzhang13/rlm](https://github.com/alexzhang13/rlm) | Official paper implementation | Core REPL mechanics, error handling |
-| [dspy.RLM](https://dspy.ai/api/modules/RLM/) | DSPy library module | Production deployment, signature-based filtering |
-| [PrimeIntellect-ai/verifiers](https://github.com/PrimeIntellect-ai/verifiers) | Scalable evaluation framework | Parallel sub-LLM processing, diffusion answers |
-| [ysz/recursive-llm](https://github.com/ysz/recursive-llm) | Standalone Python implementation | LiteLLM integration, safety guardrails |
-| [manu-mishra/RLMWithStrands](https://github.com/manu-mishra/RLMWithStrands) | AWS/Bedrock implementation | Cloud deployment, observability |
+The value is in the **architectural principle**: use cheap deterministic
+computation to reduce what the expensive LLM sees.
+
+- **98.4% token reduction** comes from code filters, not from model autonomy
+- **100% accuracy** (on synthetic data) comes from focused context, not
+  from self-directed reasoning
+- **$1.98M/year savings** comes from the filter-then-verify pattern
+
+Whether you implement this as hardcoded filters (this project), tool
+calling, or a model-controlled system, the cost savings from "don't send
+everything to the LLM" remain.
+
+---
+
+## Related Implementations
+
+| Project | Description |
+|---------|-------------|
+| [Stripe Radar](https://stripe.com/radar) | ML + rules + LLM hybrid, blocks $20B+ fraud annually |
+| [PayPal fraud detection](https://www.paypal.com) | LLM for transaction explanation, reduced review time 40% |
+| [Feedzai](https://feedzai.com) | LLM + ML ensemble, 60% reduction in false positives |

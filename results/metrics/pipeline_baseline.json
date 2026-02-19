@@ -1,5 +1,5 @@
 {
-  "approach": "rlm",
+  "approach": "pipeline",
   "annual_cost": 11.33325,
   "f1_score": 0.0,
   "precision": 0.0,

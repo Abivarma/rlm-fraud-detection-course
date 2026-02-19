@@ -6,7 +6,7 @@
     "cost": 0.0156,
     "tokens": 101906
   },
-  "rlm": {
+  "pipeline": {
     "metrics": {
       "accuracy": 0.865,
       "precision": 0.1111111111111111,

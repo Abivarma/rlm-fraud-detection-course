@@ -1,4 +1,4 @@
-"""RLM-based fraud detection agent using code generation for transaction filtering."""
+"""Legacy fraud detection agent using code generation for transaction filtering (kept for comparison)."""
 
 import os
 import json
@@ -15,8 +15,8 @@ from src.metrics.tracker import AnalysisMetrics
 load_dotenv()
 
 
-class RLMFraudAgent:
-    """RLM approach: Generate code to filter transactions, then analyze suspicious subset.
+class LegacyFraudAgent:
+    """Legacy approach: Generate code to filter transactions, then analyze suspicious subset.
 
     This approach demonstrates:
     - Code generation for statistical filtering (velocity, amount, geography)
@@ -26,7 +26,7 @@ class RLMFraudAgent:
     """
 
     def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.1):
-        """Initialize the RLM fraud detection agent.
+        """Initialize the legacy fraud detection agent.
 
         Args:
             model: OpenAI model to use (default: gpt-4o-mini for cost efficiency)
@@ -58,8 +58,8 @@ class RLMFraudAgent:
         # Load historical fraud cases (500 cases - will retrieve top-50)
         self.historical_cases = self._load_historical_cases()
 
-        # Initialize RLM agent for code generation
-        self.rlm_agent = create_rlm_agent(
+        # Initialize legacy agent for code generation
+        self.legacy_agent = create_rlm_agent(
             model=f"openai:{model}",
             sub_model=f"openai:{model}",  # Use same model for sub-queries
             code_timeout=60.0
@@ -95,7 +95,7 @@ class RLMFraudAgent:
         Returns:
             Tuple of (generated_code, suspicious_transaction_ids)
         """
-        # Convert transactions to dict format for RLM context
+        # Convert transactions to dict format for code generation context
         txns_dict = transactions.to_dict('records')
 
         # Create filtering prompt
@@ -129,17 +129,17 @@ for txn in context:
 
 Generate the filtering code now:"""
 
-        # Run RLM code generation
+        # Run code generation
         deps = RLMDependencies(
             context=txns_dict,
             config=RLMConfig(code_timeout=60.0, sub_model=f"openai:{self.model}")
         )
 
         try:
-            result = await self.rlm_agent.run(filter_prompt, deps=deps)
+            result = await self.legacy_agent.run(filter_prompt, deps=deps)
 
             # Extract suspicious IDs from result
-            # The RLM agent should have executed the code and returned results
+            # The agent should have executed the code and returned results
             suspicious_ids = result.data if isinstance(result.data, list) else []
 
             # Store the generated code (for debugging/transparency)
@@ -148,12 +148,12 @@ Generate the filtering code now:"""
             return str(result), suspicious_ids
 
         except Exception as e:
-            print(f"⚠️ RLM code generation failed: {str(e)}")
+            print(f"⚠️ Code generation failed: {str(e)}")
             # Fallback: return empty list (no filtering)
             return f"# Error: {str(e)}", []
 
     def _filter_transactions_statistically(self, transactions: pd.DataFrame) -> List[str]:
-        """Fallback: Use statistical filtering if RLM fails.
+        """Fallback: Use statistical filtering if code generation fails.
 
         Args:
             transactions: DataFrame with transaction data
@@ -193,13 +193,13 @@ Generate the filtering code now:"""
 
         return list(set(suspicious_ids))  # Remove duplicates
 
-    def analyze(self, transactions: pd.DataFrame, retry_delay: int = 20, use_rlm: bool = True) -> Tuple[List[bool], AnalysisMetrics]:
-        """Analyze transactions for fraud using RLM approach.
+    def analyze(self, transactions: pd.DataFrame, retry_delay: int = 20, use_codegen: bool = True) -> Tuple[List[bool], AnalysisMetrics]:
+        """Analyze transactions for fraud using code generation approach.
 
         Args:
             transactions: DataFrame with transaction data
             retry_delay: Seconds to wait on rate limit (default: 20)
-            use_rlm: Whether to use RLM code generation (True) or fallback filtering (False)
+            use_codegen: Whether to use LLM code generation (True) or fallback filtering (False)
 
         Returns:
             Tuple of (predictions, metrics):
@@ -215,8 +215,8 @@ Generate the filtering code now:"""
         # Step 1: Filter transactions to suspicious subset
         filter_start = time.time()
 
-        if use_rlm:
-            # Use RLM code generation (async)
+        if use_codegen:
+            # Use LLM code generation (async)
             import asyncio
             try:
                 generated_code, suspicious_ids = asyncio.run(
@@ -224,7 +224,7 @@ Generate the filtering code now:"""
                 )
                 self.last_generated_code = generated_code
             except Exception as e:
-                print(f"⚠️ RLM filtering failed, using statistical fallback: {str(e)}")
+                print(f"⚠️ Code generation filtering failed, using statistical fallback: {str(e)}")
                 suspicious_ids = self._filter_transactions_statistically(transactions)
         else:
             # Use statistical fallback
@@ -299,7 +299,7 @@ Generate the filtering code now:"""
 
         # Create metrics
         metrics = AnalysisMetrics(
-            approach='rlm',
+            approach='legacy',
             total_tokens=usage.total_tokens,
             prompt_tokens=usage.prompt_tokens,
             completion_tokens=usage.completion_tokens,

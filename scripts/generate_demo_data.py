@@ -1,6 +1,6 @@
-"""Generate 8 carefully crafted fraud scenarios for RLM benefits demonstration.
+"""Generate 8 carefully crafted fraud scenarios for pipeline benefits demonstration.
 
-Each scenario is designed to highlight a specific advantage of the RLM approach
+Each scenario is designed to highlight a specific advantage of the pipeline approach
 over Naive (500 historical cases) and RAG (50 retrieved cases).
 """
 
@@ -23,7 +23,7 @@ def generate_scenarios():
         'id': 1,
         'name': 'Velocity Attack',
         'description': '5 transactions in 3 minutes from same user — card testing pattern',
-        'why_rlm_wins': 'Code detects time_diff < 300s deterministically; Naive sends 22K tokens for same result',
+        'why_pipeline_wins': 'Code detects time_diff < 300s deterministically; Naive sends 22K tokens for same result',
         'transactions': [
             {'transaction_id': 'TXN_S1_001', 'user_id': 'U_VEL_01', 'amount': 45.99,
              'timestamp': base_ts, 'location': 'NYC', 'device': 'mobile',
@@ -49,7 +49,7 @@ def generate_scenarios():
         'id': 2,
         'name': 'Geographic Impossibility',
         'description': 'User transacts in NYC, then Tokyo 10 minutes later — impossible travel',
-        'why_rlm_wins': 'Code checks location+time pairs; RAG cannot do distance/time math',
+        'why_pipeline_wins': 'Code checks location+time pairs; RAG cannot do distance/time math',
         'transactions': [
             {'transaction_id': 'TXN_S2_001', 'user_id': 'U_GEO_01', 'amount': 28.50,
              'timestamp': base_ts, 'location': 'NYC', 'device': 'mobile',
@@ -72,7 +72,7 @@ def generate_scenarios():
         'id': 3,
         'name': 'Amount Spike',
         'description': 'User averages $19 on groceries, suddenly spends $487 on jewelry from desktop',
-        'why_rlm_wins': 'Code computes leave-one-out std dev (z=170); LLM confirms category shift',
+        'why_pipeline_wins': 'Code computes leave-one-out std dev (z=170); LLM confirms category shift',
         'transactions': [
             {'transaction_id': 'TXN_S3_001', 'user_id': 'U_AMT_01', 'amount': 18.50,
              'timestamp': base_ts, 'location': 'LA', 'device': 'mobile',
@@ -98,7 +98,7 @@ def generate_scenarios():
         'id': 4,
         'name': 'Account Takeover',
         'description': 'User profile shifts: mobile→desktop, LA→Chicago, grocery→gift_cards, $20→$250',
-        'why_rlm_wins': 'Multi-filter cross-check: device_shift + amount catches subtle ATO pattern',
+        'why_pipeline_wins': 'Multi-filter cross-check: device_shift + amount catches subtle ATO pattern',
         'transactions': [
             {'transaction_id': 'TXN_S4_001', 'user_id': 'U_ATO_01', 'amount': 22.50,
              'timestamp': base_ts, 'location': 'LA', 'device': 'mobile',
@@ -124,7 +124,7 @@ def generate_scenarios():
         'id': 5,
         'name': 'Micro-Transaction Testing',
         'description': '8 automated $1-2 transactions in 2 minutes — bot card testing pattern',
-        'why_rlm_wins': 'Velocity filter catches count + timing; RAG finds no similar historical cases for $1 txns',
+        'why_pipeline_wins': 'Velocity filter catches count + timing; RAG finds no similar historical cases for $1 txns',
         'transactions': [
             {'transaction_id': f'TXN_S5_{i+1:03d}', 'user_id': 'U_MICRO_01',
              'amount': round(1.0 + i * 0.13, 2),
@@ -140,7 +140,7 @@ def generate_scenarios():
         'id': 6,
         'name': 'Legitimate High-Value',
         'description': 'Consistent high-value user ($200-400 range) — should NOT be flagged',
-        'why_rlm_wins': 'Filters correctly pass through (no anomaly); Naive may over-flag due to high amounts',
+        'why_pipeline_wins': 'Filters correctly pass through (no anomaly); Naive may over-flag due to high amounts',
         'transactions': [
             {'transaction_id': 'TXN_S6_001', 'user_id': 'U_LEGIT_01', 'amount': 245.00,
              'timestamp': base_ts, 'location': 'NYC', 'device': 'desktop',
@@ -163,7 +163,7 @@ def generate_scenarios():
         'id': 7,
         'name': 'Mixed Batch',
         'description': '5 users, 15 transactions — 2 users have fraud, 3 are legitimate',
-        'why_rlm_wins': 'Per-user sub-calls analyze 5 users in parallel; Naive sends all 15 + 500 cases',
+        'why_pipeline_wins': 'Per-user sub-calls analyze 5 users in parallel; Naive sends all 15 + 500 cases',
         'transactions': [
             # User A: legitimate
             {'transaction_id': 'TXN_S7_001', 'user_id': 'U_MIX_A', 'amount': 35.00,
@@ -224,7 +224,7 @@ def generate_scenarios():
         'id': 8,
         'name': 'Cross-Border Rapid',
         'description': '5 transactions across London→Paris→Tokyo→Sydney in 30 minutes',
-        'why_rlm_wins': 'Geo + velocity filters both trigger = high confidence; RAG misses temporal pattern',
+        'why_pipeline_wins': 'Geo + velocity filters both trigger = high confidence; RAG misses temporal pattern',
         'transactions': [
             {'transaction_id': 'TXN_S8_001', 'user_id': 'U_XBORDER_01', 'amount': 75.00,
              'timestamp': base_ts, 'location': 'London', 'device': 'mobile',
@@ -262,7 +262,7 @@ def save_scenarios(scenarios, output_dir):
 
     # Save CSV
     df = pd.DataFrame(all_txns)
-    csv_path = output_dir / 'rlm_demo_examples.csv'
+    csv_path = output_dir / 'demo_examples.csv'
     df.to_csv(csv_path, index=False)
     print(f"Saved {len(df)} transactions to {csv_path}")
 
@@ -273,14 +273,14 @@ def save_scenarios(scenarios, output_dir):
             'id': s['id'],
             'name': s['name'],
             'description': s['description'],
-            'why_rlm_wins': s['why_rlm_wins'],
+            'why_pipeline_wins': s['why_pipeline_wins'],
             'num_transactions': len(s['transactions']),
             'num_fraud': sum(1 for t in s['transactions'] if t['is_fraud']),
             'fraud_types': list(set(t['fraud_type'] for t in s['transactions'] if t['fraud_type'])),
             'txn_ids': [t['transaction_id'] for t in s['transactions']],
             'fraud_txn_ids': [t['transaction_id'] for t in s['transactions'] if t['is_fraud']],
         })
-    json_path = output_dir / 'rlm_demo_scenarios.json'
+    json_path = output_dir / 'demo_scenarios.json'
     with open(json_path, 'w') as f:
         json.dump(meta, f, indent=2)
     print(f"Saved {len(meta)} scenario metadata to {json_path}")

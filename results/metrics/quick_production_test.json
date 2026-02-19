@@ -33,7 +33,7 @@
     "tokens": 7904,
     "time_s": 8.407299041748047
   },
-  "rlm": {
+  "pipeline": {
     "metrics": {
       "accuracy": 0.94,
       "precision": 0.0,

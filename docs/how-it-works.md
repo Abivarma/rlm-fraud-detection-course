@@ -5,22 +5,14 @@ title: How It Works
 
 # How the Pipeline Works
 
-This implementation is **inspired by** the Recursive Language Model (RLM)
-paradigm ([arXiv:2512.24601](https://arxiv.org/abs/2512.24601)), which treats
-the LLM as an orchestrator that interacts with data through a persistent REPL
-rather than ingesting it into the context window.
+This is a **filter-then-verify pipeline** -- a linear 4-phase system where
+deterministic Python code filters data first, and the LLM only verifies
+the flagged subset. The control plane is hardcoded Python. The 4-phase
+pipeline is fixed, the filters are pre-built with fixed thresholds, and the
+LLM is called only at a specific point (Phase 3) for semantic verification.
 
-**Important distinction**: In a true RLM, the LLM controls the reasoning
-loop -- it decides what code to run, observes results, and iterates. In this
-implementation, the **control plane is hardcoded Python**. The 4-phase
-pipeline is fixed, the filters are pre-built, and the LLM is called only at
-a specific point (Phase 3) for semantic verification. The LLM does not
-decide what to filter or when to recurse.
-
-This is an **RLM-inspired orchestration pipeline**, not a true recursive
-model. What we borrow from RLM: context folding, symbolic filtering before
-LLM invocation, and targeted sub-calls. What differs: all orchestration
-logic is deterministic code, not model-driven.
+The LLM does not decide what to filter, when to recurse, or how to
+orchestrate the pipeline. It is a **rule-gated LLM verifier**.
 
 ---
 
@@ -155,8 +147,8 @@ indicative of potential card testing."
 
 **Comparison**:
 
-| Metric | Naive | RLM |
-|--------|-------|-----|
+| Metric | Naive | Pipeline |
+|--------|-------|----------|
 | Tokens | 23,167 | 387 |
 | Cost | $0.0036 | $0.0001 |
 | Accuracy | 100% | 100% |
@@ -193,14 +185,14 @@ range, device change from mobile to desktop, category shift to luxury."
 
 **Comparison**:
 
-| Metric | Naive | RLM |
-|--------|-------|-----|
+| Metric | Naive | Pipeline |
+|--------|-------|----------|
 | Tokens | 23,040 | 379 |
 | Cost | $0.0035 | $0.0001 |
 | Accuracy | 100% | 100% |
 | Data sent to LLM | 5 txns + 500 cases | 1 txn + 4 baseline |
 
-RLM sent 98.4% fewer tokens by letting the code filter identify the obvious
+The pipeline sent 98.4% fewer tokens by letting the code filter identify the obvious
 anomaly (z=170.61) before involving the LLM.
 
 ---
@@ -222,31 +214,10 @@ only their own transactions. No cross-contamination between users.
 
 ---
 
-## What This Is Not
-
-This pipeline **borrows principles** from the RLM paper but differs in a
-fundamental way: **who controls the loop**.
-
-In a true RLM, the model generates code, executes it in a REPL, observes
-results, and decides what to do next. The model is the controller.
-
-In this implementation, every step is predetermined:
-- The pipeline always runs 4 phases in order
-- The filters are hardcoded Python with fixed thresholds
-- The LLM is called at exactly one point (Phase 3) with a fixed prompt template
-- The model has no ability to change the pipeline, add filters, or recurse
-
-This is closer to a **rule-gated LLM verifier** -- a valid and practical
-design pattern, but distinct from recursive self-directed reasoning.
-See [Architecture: How This Differs](architecture#how-this-differs-from-true-rlm-and-tool-calling)
-for the full comparison.
-
----
-
 ## Source Code
 
 The complete implementation is in
-[`src/agents/rlm_repl_agent.py`](https://github.com/Abivarma/smart-llm-fraud-detection/blob/main/src/agents/rlm_repl_agent.py).
+[`src/agents/pipeline_agent.py`](https://github.com/Abivarma/smart-llm-fraud-detection/blob/main/src/agents/pipeline_agent.py).
 
 Key methods:
 - `_velocity_filter()` -- time-window based card testing detection

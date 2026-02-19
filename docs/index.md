@@ -16,10 +16,8 @@ benchmarks.
 > **What this is**: A linear Python pipeline with hardcoded rule-based
 > filters + targeted LLM verification. The LLM has zero autonomy -- code
 > controls everything. This is not an AI agent, not a recursive model,
-> and not tool calling. It borrows ideas from the RLM paradigm
-> ([arXiv:2512.24601](https://arxiv.org/abs/2512.24601)) but the
-> implementation is a straightforward sequential pipeline. See
-> [how it compares to other approaches](architecture#how-this-differs-from-true-rlm-and-tool-calling).
+> and not tool calling. It is a straightforward sequential pipeline.
+> See [how it compares to other approaches](architecture#how-this-differs-from-other-approaches).
 
 ---
 
@@ -54,8 +52,8 @@ Output (predictions + full audit trail)
 
 Tested across 8 **synthetic** fraud scenarios (51 transactions) with live gpt-4o-mini API calls:
 
-| Metric | Naive (Baseline) | RLM | Improvement |
-|--------|-----------------|-----|-------------|
+| Metric | Naive (Baseline) | Pipeline | Improvement |
+|--------|-----------------|----------|-------------|
 | Tokens | 185,661 | 3,059 | **98.4% reduction** |
 | Cost | $0.0285 | $0.0008 | **97.1% reduction** |
 | Accuracy | 94% (48/51) | **100%** (51/51) | +6 points |
@@ -74,8 +72,8 @@ transactions.
 
 ## Cost Projections at Enterprise Scale
 
-| Daily Volume | Naive / Year | RLM / Year | Annual Savings |
-|-------------|-------------|-----------|----------------|
+| Daily Volume | Naive / Year | Pipeline / Year | Annual Savings |
+|-------------|-------------|----------------|----------------|
 | 10K txns | $2,042 | $60 | $1,982 |
 | 100K txns | $20,415 | $599 | $19,816 |
 | 1M txns | $204,153 | $5,992 | $198,161 |
@@ -125,9 +123,9 @@ it demonstrates and what it does not:
 - **No concept drift handling**: Fraud tactics evolve. This system has no
   retraining pipeline, no threshold adaptation, and no feedback loop from
   outcomes.
-- **Not a true RLM**: The LLM does not control the reasoning loop. All
+- **Linear pipeline**: The LLM does not control the reasoning loop. All
   orchestration is deterministic Python code.
-  [See the full comparison](architecture#how-this-differs-from-true-rlm-and-tool-calling).
+  [See the full comparison](architecture#how-this-differs-from-other-approaches).
 
 What this **does** demonstrate: the principle that deterministic code
 filtering before LLM invocation dramatically reduces cost and improves
@@ -139,11 +137,11 @@ focus. That principle holds regardless of data source or scale.
 
 | Page | Description |
 |------|-------------|
-| [How It Works](how-it-works) | 4-phase REPL loop with real trajectory examples |
+| [How It Works](how-it-works) | 4-phase pipeline with real trajectory examples |
 | [Results](results) | All 8 scenarios with detailed comparisons |
-| [Research](research) | The RLM paradigm from arXiv:2512.24601 |
+| [Research](research) | Context rot, attention dilution, and filter-then-verify principles |
 | [Architecture](architecture) | Technical deep dive into all three agents |
-| [Enterprise FAQ](faq) | 16 questions on costs, scaling, production readiness |
+| [Enterprise FAQ](faq) | 19 questions on costs, scaling, production readiness |
 
 ---
 
@@ -152,7 +150,6 @@ focus. That principle holds regardless of data source or scale.
 Built by [Abivarma](https://github.com/Abivarma) as a quantified case
 study showing how deterministic pre-filtering reduces LLM API costs by 97%.
 The implementation uses hardcoded Python filters with targeted OpenAI
-gpt-4o-mini sub-calls for semantic verification. Inspired by the RLM
-paradigm ([arXiv:2512.24601](https://arxiv.org/abs/2512.24601)).
+gpt-4o-mini sub-calls for semantic verification.
 
 [View the source code on GitHub](https://github.com/Abivarma/smart-llm-fraud-detection)
